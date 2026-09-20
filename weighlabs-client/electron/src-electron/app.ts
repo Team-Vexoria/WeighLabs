@@ -12,6 +12,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL
 
 app.on("ready", () => {
     const window = new BrowserWindow({
+        minWidth: 1280,
+        minHeight: 720,
         frame: true,
     })
     nativeTheme.themeSource = "system"

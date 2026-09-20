@@ -28,22 +28,30 @@
 
     .button {
         @apply duration-ui;
-        @apply dark:hover:bg-main/10 hover:bg-main-dark/10;
+        @apply dark:hover:bg-main-dark/10 hover:bg-main-dark/30;
+        @apply text-main-dark dark:text-white;
         @apply rounded-ui;
     }
 
     .dashboard-material {
         @apply rounded-ui;
         @apply dark:bg-main/5 bg-main-dark/5;
+        @apply text-main-dark dark:text-white;
         @apply font-ui;
     }
 }
 
 button {
     @apply hover:cursor-pointer;
+    @apply text-main-dark dark:text-white;
 }
 
 @font-face {
     font-family: "Sf Pro";
     src: url('assets/fonts/Sf Pro.OTF');
+}
+
+::selection {
+    background: #141414;
+    color: #ffffff;
 }
