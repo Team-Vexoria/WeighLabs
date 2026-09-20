@@ -10,11 +10,12 @@ export interface Tab {
 
 // tab page
 import { newTabContent } from '../components/UI/App/TabContent/New'
+import { dashboardContent } from '../components/UI/App/TabContent/Dashboard'
 
 export default function App() {
 
     const [tabs, setTabsArray] = useState<Tab[]>([
-        {Label: "New Tab", Component: newTabContent}
+        {Label: "New Tab", Component: dashboardContent}
     ])
     const [activeTab, setActiveTab] = useState<Tab>(tabs[0])
     const [activeTabContent, setActiveTabContent] = useState<React.ReactNode>(tabs[0].Component)
@@ -25,7 +26,7 @@ export default function App() {
                 <Sidebar />
                 <AppSidebar />
                 <div className="w-full flex flex-col">
-                    <Tabbar tabs={tabs}/>
+                    <Tabbar setActiveTabFunction={setActiveTabContent}/>
                     {activeTabContent}
                 </div>
             </div>

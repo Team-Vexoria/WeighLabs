@@ -1,5 +1,7 @@
 import logo from "../../../assets/wordmark-no-credit.png"
 import logoDark from "../../../assets/wordmark-no-credit-dark.png"
+import placeholderProfileImage from '../../../assets/placeholder/profile.jpg'
+import { Icon } from '@iconify/react'
 
 export default function Sidebar() {
     return (
@@ -15,23 +17,31 @@ export default function Sidebar() {
                 </div>
 
                 {/* USER INFORMATION */}
-                <div className="min-w-60 border border-border/10 dark:border-border-dark/10 p-ui rounded-ui flex flex-col">
-                    <h3>Logged in as</h3>
-                    <div>
-                        <h1>Dr. Pradeep</h1>
+                <div className="min-w-60 duration-ui border border-border/10 dark:border-border-dark/10 hover:bg-main/10 hover:cursor-pointer p-ui rounded-ui flex flex-col">
+                    <h3 className="opacity-50 flex gap-1.5 items-center"><Icon icon="codicon:account" />Logged in as</h3>
+                    <div className="flex my-2 items-center gap-2 border dark:border-border-dark/10 border-border/10 rounded-ui p-ui">
+                        <img className="w-10 rounded-full" src={placeholderProfileImage}></img>
+                        <div>
+                            <h1 className="">Dr. Pradeep</h1>
+                            <h2 className="text-[12px] opacity-50">LAB011010231</h2>
+                        </div>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-1 my-5 p-ui text-left">
                     <div className="flex flex-col relative py-5 border-t border-border/10 dark:border-border-dark/10">
                         <h2 className="absolute -top-3 left-0 bg-main px-ui py-1 dark:bg-main-dark font-mono text-[12px]">Testing</h2>
-                        <button className="text-left px-2 py-1 hover:bg-white/10">Test Reports</button>
-                        <button className="text-left px-2 py-1 hover:bg-white/10">Create New Test</button>
+                        <button className="duration-ui rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="boxicons:dashboard-alt-filled"/>Dashboard</button>
+                        <button className="duration-ui rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="carbon:report"/>View Reports</button>
+                        <button className="duration-ui rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="mdi:beaker-plus"/>Create New Test</button>
                     </div>
 
                     <div className="flex flex-col relative py-5 border-t border-border/10 dark:border-border-dark/10">
                         <h2 className="absolute -top-3 left-0 bg-main px-ui py-1 dark:bg-main-dark font-mono text-[12px]">Account</h2>
-                        <button className="text-left px-2 py-1 hover:bg-white/10">Settings</button>
+                        <button className="duration-ui rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10">
+                            <Icon icon="carbon:settings"/>
+                            Settings
+                        </button>
                     </div>
                 </div>
 
