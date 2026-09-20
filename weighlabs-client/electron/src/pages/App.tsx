@@ -11,6 +11,7 @@ export interface Tab {
 // tab page
 import { newTabContent } from '../components/UI/App/TabContent/New'
 import { dashboardContent } from '../components/UI/App/TabContent/Dashboard'
+import { createTestTabContent } from '../components/UI/App/TabContent/CreateTest'
 
 export default function App() {
 

@@ -1,4 +1,3 @@
-import { Icon } from '@iconify/react'
 import React from 'react'
 
 export const dashboardContent: React.ReactNode = (
@@ -11,7 +10,17 @@ export const dashboardContent: React.ReactNode = (
     // TEMPERATURE
     <>
         <div className="w-full font-ui px-5 py-2 flex flex-col gap-2 dashboard">
-            <h1 className="flex gap-1 items-center">Test #012313</h1>
+            <div className="flex items-center">
+                <h1 className="flex gap-1 items-center">Test #012313</h1>
+                
+                
+                {/* BUTTONS */}
+                <div className="ml-auto flex gap-1">
+                    <button className="p-ui min-w-20 button border border-white/5 bg-neutral-900">Print</button>
+                    <button className="p-ui min-w-20 button border border-white/5 bg-indigo-950">Continue Test</button>
+                    <button className="p-ui min-w-20 button border border-white/5 bg-red-950">End Test</button>
+                </div>
+            </div>
             <div className="flex gap-dashboard">
                 {/* GRAPH */}
                 <div className="flex-5 h-100 dashboard-material">
@@ -76,13 +85,6 @@ export const dashboardContent: React.ReactNode = (
                 </div>
             </div>
 
-            
-            {/* BUTTONS */}
-            <div className="flex gap-1">
-                <button className="p-ui button border border-white/5">PRINT</button>
-                <button className="p-ui button border border-white/5">CONTINUE TEST</button>
-                <button className="p-ui button border border-white/5">END TEST</button>
-            </div>
         </div>
     </>
 )
