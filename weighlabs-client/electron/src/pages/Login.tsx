@@ -15,7 +15,7 @@ export default function App() {
                     <div className="w-full flex-1 p-ui">
                         <Logo />
                         {/* PROFILES */}
-                        <div className="flex justify-self-center mt-50 gap-3 h-full">
+                        <div className="flex justify-self-center mt-50 gap-3 ">
                             <ProfileInstance />
                             <ProfileInstance />
                         </div>

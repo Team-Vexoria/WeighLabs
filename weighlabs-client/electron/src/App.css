@@ -3,6 +3,9 @@
 @theme {
     --color-main: #ffffff;
     --color-main-dark: #141414;
+    --color-border: #000000;
+    --color-border-dark: #ffffff;
+    
     --font-ui: "Sf Pro";
     
     --radius-ui: 8px;
@@ -15,6 +18,10 @@
         @apply bg-main dark:bg-main-dark;
         @apply text-main-dark dark:text-white;
     }
+}
+
+button {
+    @apply hover:cursor-pointer;
 }
 
 @font-face {
