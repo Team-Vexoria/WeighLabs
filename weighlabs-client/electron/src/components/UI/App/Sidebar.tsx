@@ -38,9 +38,9 @@ export default function Sidebar({ addTab }: SidebarProps) {
                 <div className="flex flex-col gap-1 my-5 p-ui text-left">
                     <div className="flex flex-col relative py-5 border-t border-border/10 dark:border-border-dark/10">
                         <h2 className="absolute -top-3 left-0 bg-main px-ui py-1 dark:bg-main-dark font-mono text-[12px]">Testing</h2>
-                        <button onClick={() => {addTab(dashboardContent, "Dashboard")}} className="duration-ui rounded-ui text-main-dark dark:text-border flex i dark:hover:bg-border-dark/10tems-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10"><Icon icon="boxicons:dashboard-alt-filled"/>Dashboard</button>
-                        <button className="duration-ui rounded-ui text-main-dark dark:text-border flex i dark:hover:bg-border-dark/10tems-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10"><Icon icon="carbon:report"/>View Reports</button>
-                        <button onClick={() => { addTab(createTestTabContent, "Create Test")}} className="duration-ui rounded-ui text-main-dark dark:text-border flex i dark:hover:bg-border-dark/10tems-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10"><Icon icon="mdi:beaker-plus"/>Create New Test</button>
+                        <button onClick={() => {addTab(dashboardContent, "Dashboard")}} className="duration-ui rounded-ui text-main-dark dark:text-border flex items-center dark:hover:bg-border-dark/10tems-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10"><Icon icon="boxicons:dashboard-alt-filled"/>Dashboard</button>
+                        <button className="duration-ui rounded-ui text-main-dark dark:text-border flex items-center dark:hover:bg-border-dark/10tems-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10"><Icon icon="carbon:report"/>View Reports</button>
+                        <button onClick={() => { addTab(createTestTabContent, "Create Test")}} className="duration-ui rounded-ui text-main-dark dark:text-border flex items-center dark:hover:bg-border-dark/10tems-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10"><Icon icon="mdi:beaker-plus"/>Create New Test</button>
                     </div>
 
                     <div className="flex flex-col relative py-5 border-t border-border/10 dark:border-border-dark/10">

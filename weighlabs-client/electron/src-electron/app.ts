@@ -15,8 +15,9 @@ app.on("ready", () => {
         minWidth: 1280,
         minHeight: 720,
         frame: true,
+        icon: "/images/icon.png"
     })
-    nativeTheme.themeSource = "system"
+    nativeTheme.themeSource = "dark"
 
     
     if (isDev) {
