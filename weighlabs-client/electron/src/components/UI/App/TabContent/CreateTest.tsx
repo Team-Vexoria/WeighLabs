@@ -47,7 +47,7 @@ const Field = ({
 
 export const createTestTabContent: React.ReactNode = (
     <>
-        <div className="w-full px-10 py-5 font-ui flex flex-col">
+        <div className="w-full px-5 py-2 font-ui flex flex-col">
             <h1 className="text-3xl mb-5">Create a Test Instance</h1>
 
             {/* INPUT INSTRUMENT INFORMATION */}
