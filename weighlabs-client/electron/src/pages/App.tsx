@@ -24,16 +24,17 @@ export default function App() {
     const [activeTabId, setActiveTabId] = useState<string>(tabs[0].id)
     const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0]
 
-    const addTab = (component: React.ReactNode = newTabContent, label: string = "New Tab") => {
+    const addTab = (component: React.ReactNode = newTabContent, label?: string) => {
         setTabs(prev => {
-            // if a tab with this label already exists, just switch to it
-            const existing = prev.find(t => t.Label === label)
+            const resolvedLabel = label ?? `New Tab #${prev.filter(t => t.Label.startsWith('New Tab')).length + 1}`
+    
+            const existing = prev.find(t => t.Label === resolvedLabel)
             if (existing) {
                 setActiveTabId(existing.id)
                 return prev
             }
-
-            const newTab: Tab = { id: crypto.randomUUID(), Label: label, Component: component }
+    
+            const newTab: Tab = { id: crypto.randomUUID(), Label: resolvedLabel, Component: component }
             setActiveTabId(newTab.id)
             return [...prev, newTab]
         })

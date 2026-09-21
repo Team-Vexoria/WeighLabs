@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react'
 import { type Tab } from '../../../pages/App' 
+import { newTabContent } from './TabContent/New'
 
 interface TabbarProps {
     tabs: Tab[]
@@ -23,7 +24,7 @@ function TabButton({ tab, isActive, onSelect, onClose }: TabButtonProps) {
             className={`group font-ui flex items-center gap-2 px-3 py-2 border-r border-border/10 dark:border-border-dark/10 whitespace-nowrap
                 ${isActive
                     ? 'bg-border/5 dark:bg-border-dark/5 '
-                    : 'hover:bg-border/10 dark:hover:bg-border-dark/10 text-foreground/60 dark:text-foreground-dark/60'
+                    : 'text-foreground/60 dark:text-foreground-dark/60'
                 }`}
         >
             <span className="truncate max-w-40">{tab.Label}</span>
@@ -54,7 +55,7 @@ export default function Tabbar({ tabs, activeTabId, setActiveTabId, addTab, remo
             ))}
 
             {/* Create Tab */}
-            <button onClick={() => { addTab()}} className="p-2 hover:bg-border-dark/10">
+            <button onClick={() => addTab()} className="p-2 hover:bg-border-dark/10">
                 <Icon icon="akar-icons:plus" />
             </button>
         </div>
