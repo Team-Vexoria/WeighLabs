@@ -14,7 +14,7 @@ app.on("ready", () => {
         minHeight: 720,
         frame: false,
         autoHideMenuBar: true,
-        icon: "/images/icon.png",
+        icon: path.join(import.meta.dirname, "images", "icon.png"),
         webPreferences: {
             preload: path.join(import.meta.dirname, "preload.cjs")
         }
