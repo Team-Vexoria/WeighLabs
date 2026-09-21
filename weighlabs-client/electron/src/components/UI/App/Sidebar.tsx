@@ -1,5 +1,4 @@
 import logo from "../../../assets/wordmark-no-credit.png"
-import logoDark from "../../../assets/wordmark-no-credit-dark.png"
 import placeholderProfileImage from '../../../assets/placeholder/profile.jpg'
 import { Icon } from '@iconify/react'
 
@@ -13,7 +12,7 @@ interface SidebarProps {
 export default function Sidebar({ addTab }: SidebarProps) {
     return (
         <>
-            <div className="min-h-screen p-ui border-r border-border/10 dark:border-border-dark/10 font-ui">
+            <div className="h-full p-ui border-r border-border/10 dark:border-border-dark/10 font-ui">
 
                 {/* LOGO */}
                 <div className="p-ui w-25">

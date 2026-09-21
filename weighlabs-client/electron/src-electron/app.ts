@@ -1,9 +1,7 @@
 // Entry point of the electron app.
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import 'dotenv/config'
-import 'node:path'
 import path from 'node:path'
-import { nativeTheme } from 'electron/main'
 
 // set true before building for production
 const isDev = true
@@ -14,10 +12,42 @@ app.on("ready", () => {
     const window = new BrowserWindow({
         minWidth: 1280,
         minHeight: 720,
-        frame: true,
-        icon: "/images/icon.png"
+        frame: false,
+        autoHideMenuBar: true,
+        icon: "/images/icon.png",
+        webPreferences: {
+            preload: path.join(import.meta.dirname, "preload.cjs")
+        }
     })
     nativeTheme.themeSource = "dark"
+
+    // CUSTOM WINDOW CONTROLS
+    ipcMain.on('window:minimize', (event) => {
+        BrowserWindow.fromWebContents(event.sender)?.minimize()
+    })
+    ipcMain.on('window:toggle-maximize', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (!win) return
+        if (win.isMaximized()) {
+            win.unmaximize()
+        } else {
+            win.maximize()
+        }
+    })
+    ipcMain.on('window:close', (event) => {
+        BrowserWindow.fromWebContents(event.sender)?.close()
+    })
+    ipcMain.handle('window:is-maximized', (event) => {
+        return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
+    })
+
+    const notifyMaximizeState = () => {
+        if (!window.isDestroyed()) {
+            window.webContents.send('window:maximize-changed', window.isMaximized())
+        }
+    }
+    window.on('maximize', notifyMaximizeState)
+    window.on('unmaximize', notifyMaximizeState)
 
     
     if (isDev) {

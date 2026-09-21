@@ -1,6 +1,5 @@
 import { Icon } from '@iconify/react'
-import { type Tab } from '../../../pages/App' 
-import { newTabContent } from './TabContent/New'
+import { type Tab } from '../../../pages/App'
 
 interface TabbarProps {
     tabs: Tab[]
