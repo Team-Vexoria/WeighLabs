@@ -3,7 +3,14 @@ import logoDark from "../../../assets/wordmark-no-credit-dark.png"
 import placeholderProfileImage from '../../../assets/placeholder/profile.jpg'
 import { Icon } from '@iconify/react'
 
-export default function Sidebar() {
+import { dashboardContent } from '../../UI/App/TabContent/Dashboard'
+import { createTestTabContent } from '../../UI/App/TabContent/CreateTest'
+
+interface SidebarProps {
+    addTab: (component?: React.ReactNode, label?: string) => void
+}
+
+export default function Sidebar({ addTab }: SidebarProps) {
     return (
         <>
             <div className="min-h-screen p-ui border-r border-border/10 dark:border-border-dark/10 font-ui">
@@ -31,9 +38,9 @@ export default function Sidebar() {
                 <div className="flex flex-col gap-1 my-5 p-ui text-left">
                     <div className="flex flex-col relative py-5 border-t border-border/10 dark:border-border-dark/10">
                         <h2 className="absolute -top-3 left-0 bg-main px-ui py-1 dark:bg-main-dark font-mono text-[12px]">Testing</h2>
-                        <button className="duration-ui rounded-ui text-main-dark dark:text-white flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="boxicons:dashboard-alt-filled"/>Dashboard</button>
+                        <button onClick={() => {addTab(dashboardContent, "Dashboard")}} className="duration-ui rounded-ui text-main-dark dark:text-white flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="boxicons:dashboard-alt-filled"/>Dashboard</button>
                         <button className="duration-ui rounded-ui text-main-dark dark:text-white flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="carbon:report"/>View Reports</button>
-                        <button className="duration-ui rounded-ui text-main-dark dark:text-white flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="mdi:beaker-plus"/>Create New Test</button>
+                        <button onClick={() => { addTab(createTestTabContent, "Create Test")}} className="duration-ui rounded-ui text-main-dark dark:text-white flex items-center gap-1.5 text-left px-2 py-1 hover:bg-white/10"><Icon icon="mdi:beaker-plus"/>Create New Test</button>
                     </div>
 
                     <div className="flex flex-col relative py-5 border-t border-border/10 dark:border-border-dark/10">
