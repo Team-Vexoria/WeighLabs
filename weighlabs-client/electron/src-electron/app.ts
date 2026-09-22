@@ -19,7 +19,7 @@ app.on("ready", () => {
             preload: path.join(import.meta.dirname, "preload.cjs")
         }
     })
-    nativeTheme.themeSource = "dark"
+    nativeTheme.themeSource = "light"
 
     // CUSTOM WINDOW CONTROLS
     ipcMain.on('window:minimize', (event) => {

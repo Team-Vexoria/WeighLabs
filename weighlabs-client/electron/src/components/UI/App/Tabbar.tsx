@@ -42,7 +42,7 @@ function TabButton({ tab, isActive, onSelect, onClose }: TabButtonProps) {
 
 export default function Tabbar({ tabs, activeTabId, setActiveTabId, addTab, removeTab }: TabbarProps) {
     return (
-        <div className="min-w-0 max-w-screen overflow-x-auto border-b border-border/10 dark:border-border-dark/10 flex">
+        <div className="min-w-0 max-w-screen shrink-0 overflow-x-auto border-b border-border/10 dark:border-border-dark/10 flex">
             {tabs.map((tab) => (
                 <TabButton
                     key={tab.id}

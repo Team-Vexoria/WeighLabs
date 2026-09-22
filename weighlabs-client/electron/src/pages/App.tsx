@@ -74,7 +74,9 @@ export default function App() {
                         addTab={addTab}
                         removeTab={removeTab}
                     />
-                    {activeTab?.Component}
+                    <div className="overflow-auto">
+                        {activeTab?.Component}
+                    </div>
                 </div>
             </div>
         </div>

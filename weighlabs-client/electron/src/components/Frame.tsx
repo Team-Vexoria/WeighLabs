@@ -29,7 +29,7 @@ export default function Frame({ children }: FrameProps) {
     const controls = window.windowControls
 
     return (
-        <div className="w-full flex flex-col h-screen overflow-hidden">
+        <div className="w-full flex flex-col h-screen ">
             {/* TITLEBAR */}
             <div
                 style={dragRegion}
@@ -60,7 +60,7 @@ export default function Frame({ children }: FrameProps) {
             </div>
 
             {/* CONTENT */}
-            <main className="flex-1 overflow-hidden min-h-0 min-w-0">
+            <main className="flex-1  min-h-0 min-w-0">
                 {children}
             </main>
         </div>
