@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package weighlabs.nawi;
+
+// ---------------------------------------------------------------------------
+// OIML R 76 (Non-automatic weighing instruments) — data contract
+// ---------------------------------------------------------------------------
+
+enum AccuracyClass {
+  ACCURACY_CLASS_UNSPECIFIED = 0;
+  CLASS_I = 1;
+  CLASS_II = 2;
+  CLASS_III = 3;
+  CLASS_IIII = 4;
+}
+
+enum MassUnit {
+  MASS_UNIT_UNSPECIFIED = 0;
+  UNIT_KG = 1;
+  UNIT_GRAM = 2;
+  UNIT_MILLIGRAM = 3;
+  UNIT_TONNE = 4;
+  UNIT_CARAT = 5;
+}
+
+// Verification test phases performed against a NAWI, in OIML R 76 order.
+enum TestPhase {
+  TEST_PHASE_UNSPECIFIED = 0;
+  WARM_UP = 1;
+  ZERO_SETTING = 2;
+  MIN_LOAD = 3;
+  MAX_LOAD = 4;
+  ECCENTRICITY = 5;
+  ACCURACY_ASCENDING = 6;
+  ACCURACY_DESCENDING = 7;
+  REPEATABILITY = 8;
+  TARE_ACCURACY = 9;
+  VOLTAGE_VARIATION = 10;
+  COMPLETED = 11;
+}
+
+// Off-centre (eccentricity) load position per OIML R 76 §5.5.
+enum LoadCorner {
+  LOAD_CORNER_UNSPECIFIED = 0;
+  CORNER_CENTER = 1;
+  CORNER_FRONT = 2;
+  CORNER_REAR = 3;
+  CORNER_LEFT = 4;
+  CORNER_RIGHT = 5;
+}
+
+// Instrument parameters under test.
+// e = verification interval, d = actual scale interval,
+// n = number of intervals (n = Max / e), Min = minimum load.
+message ScaleConfig {
+  string serial_number = 1;
+  string model = 2;
+  AccuracyClass accuracy_class = 3;
+  MassUnit unit = 4;
+  double max_capacity = 5;
+  double min_capacity = 6;
+  double verification_interval = 7;  // e
+  double actual_interval = 8;        // d
+  int32 number_of_intervals = 9;     // n
+}
+
+// A single reference load point of the test plan.
+message LoadPoint {
+  string label = 1;
+  double reference_load = 2;  // applied reference load (unit of config)
+  double load_in_e = 3;       // reference load expressed in e
+  int32 point_index = 4;      // index within the phase
+}
+
+// One 10 Hz sample of the NAWI data stream.
+message WeighingFrame {
+  int64 sequence = 1;
+  int64 timestamp_ms = 2;
+  TestPhase phase = 3;
+  LoadPoint load_point = 4;
+  LoadCorner corner = 5;
+  double gross = 6;
+  double tare = 7;
+  double net = 8;
+  bool stable = 9;
+  double zero_offset = 10;
+  double temperature_c = 11;
+  double humidity_rh = 12;
+  double supply_voltage_v = 13;
+
+  // OIML R 76 assessment of this reading.
+  double indicated_error_e = 14;         // (indicated - reference) / e
+  double max_permissible_error_e = 15;   // mpe at this load, in e
+  bool e_compliant = 16;                 // |indicated_error_e| <= mpe
+
+  ScaleConfig config = 17;
+  string note = 18;
+}
+
+message StreamRequest {
+  // Instrument under test; omitted/invalid fields fall back to defaults.
+  ScaleConfig config = 1;
+  // Frame interval; 0 => 100 ms (10 Hz). Clamped to [16, 5000].
+  int32 tick_ms = 2;
+  // Restart the test session when it completes instead of ending the stream.
+  bool loop_session = 3;
+}
+
+message InstrumentInfo {
+  ScaleConfig config = 1;
+  string source = 2;          // e.g. "dummy-nawi-simulator"
+  string oiml_standard = 3;   // e.g. "OIML R 76"
+  string stream_format = 4;   // e.g. "weighlabs.nawi.WeighingFrame"
+}
+
+message InfoRequest {}
+
+// Served by rust-stream; the Electron app connects as a client.
+service NawiTestService {
+  rpc GetInstrumentInfo(InfoRequest) returns (InstrumentInfo);
+  rpc StreamTest(StreamRequest) returns (stream WeighingFrame);
+}

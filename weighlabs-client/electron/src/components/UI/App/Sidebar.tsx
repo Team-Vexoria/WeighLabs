@@ -1,4 +1,5 @@
 import logo from "../../../assets/wordmark-no-credit.png"
+import logoDark from "../../../assets/wordmark-no-credit-dark.png"
 import placeholderProfileImage from '../../../assets/placeholder/profile.jpg'
 import { Icon } from '@iconify/react'
 
@@ -17,7 +18,7 @@ export default function Sidebar({ addTab }: SidebarProps) {
 
                 {/* LOGO */}
                 <div className="p-ui w-25">
-                    {/* border mode * dark:hover:bg-border-dark/10/}
+                    {/* border mode * dark:hover:bg-border-dark/10 */}
                     <img className="dark:hidden flex" src={logoDark} ></img>
                     {/* dark mode */}
                     <img className="hidden dark:flex" src={logo} ></img>

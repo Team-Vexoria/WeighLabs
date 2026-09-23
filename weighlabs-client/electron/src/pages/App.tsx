@@ -18,6 +18,7 @@ function makeDefaultTab(): Tab {
     return { id: crypto.randomUUID(), Label: "New Tab", Component: newTabContent }
 }
 
+
 export default function App() {
 
     const [tabs, setTabs] = useState<Tab[]>([makeDefaultTab()])
