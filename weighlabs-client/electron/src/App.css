@@ -55,3 +55,7 @@ button {
     background: #141414;
     color: #ffffff;
 }
+
+* {
+    scrollbar-width: thin;
+}

@@ -49,10 +49,10 @@ export default function Sidebar({ addTab }: SidebarProps) {
                             <Icon icon="carbon:settings"/>
                             Settings
                         </button>
-                        <button className="duration-ui text-black rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10">
+                        <a href="/" className="duration-ui text-black dark:text-white rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10">
                             <Icon icon="mdi:logout"/>
                             Log out
-                        </button>
+                        </a>
                         
                     </div>
                 </div>
@@ -67,7 +67,6 @@ export default function Sidebar({ addTab }: SidebarProps) {
                         </h2>
                     </div>
                 </div>
-                
             </div>
         </>
     )
