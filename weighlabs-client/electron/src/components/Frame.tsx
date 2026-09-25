@@ -36,7 +36,7 @@ export default function Frame({ children }: FrameProps) {
                 onDoubleClick={(e) => {
                     if (e.target === e.currentTarget) controls?.toggleMaximize()
                 }}
-                className="h-10 shrink-0 select-none flex items-center border-b border-border/10 dark:border-border-dark/10 bg-main dark:bg-main-dark"
+                className="h-10 shrink-0 select-none flex items-center border-b border-border/5 dark:border-border-dark/5 bg-main dark:bg-main-dark"
             >
                 <div className="w-25 p-ui font-ui text-black dark:text-white">
                     <h1>WeighLabs</h1>

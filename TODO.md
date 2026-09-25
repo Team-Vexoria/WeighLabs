@@ -2,13 +2,13 @@
 
 # Client
 - [ ] UI/UX
-    - [ ] User (Operator) Login Page - Similar to *Windows 7 Bootup User Login Page*
-    - [ ] Home Page
-        - [ ] Reports
-            - [ ] View Reports
-        - [ ] Tests
-            - [ ] Initialization/Creation Page
-            - [ ] Real-Time Dashboard
+    - [X] User (Operator) Login Page - Similar to *Windows 7 Bootup User Login Page*
+    - [X] Home Page
+        - [X] Reports
+            - [X] View Reports
+        - [X] Tests
+            - [X] Initialization/Creation Page
+            - [X] Real-Time Dashboard
 - [ ] APP-BACKEND
     - [ ] Writing to SQLITE database
     - [ ] Writing/Exporting to .csv / .docx / .pdf
