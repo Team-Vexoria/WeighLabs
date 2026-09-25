@@ -23,42 +23,46 @@ function makeDefaultTab(): Tab {
 
 export default function App() {
 
-    const [tabs, setTabs] = useState<Tab[]>([makeDefaultTab()])
-    const [activeTabId, setActiveTabId] = useState<string>(tabs[0].id)
+    const [tabState, setTabState] = useState(() => {
+        const initialTab = makeDefaultTab()
+        return { tabs: [initialTab], activeTabId: initialTab.id }
+    })
+    const { tabs, activeTabId } = tabState
     const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0]
 
+    const setActiveTabId = (id: string) => {
+        setTabState(prev => prev.activeTabId === id ? prev : { ...prev, activeTabId: id })
+    }
+
     const addTab = (component: React.ReactNode = newTabContent, label?: string) => {
-        setTabs(prev => {
-            const resolvedLabel = label ?? `New Tab #${prev.filter(t => t.Label.startsWith('New Tab')).length + 1}`
-    
-            const existing = prev.find(t => t.Label === resolvedLabel)
+        setTabState(prev => {
+            const resolvedLabel = label ?? `New Tab #${prev.tabs.filter(t => t.Label.startsWith('New Tab')).length + 1}`
+            const existing = prev.tabs.find(t => t.Label === resolvedLabel)
+
             if (existing) {
-                setActiveTabId(existing.id)
-                return prev
+                return { ...prev, activeTabId: existing.id }
             }
-    
+
             const newTab: Tab = { id: crypto.randomUUID(), Label: resolvedLabel, Component: component }
-            setActiveTabId(newTab.id)
-            return [...prev, newTab]
+            return { tabs: [...prev.tabs, newTab], activeTabId: newTab.id }
         })
     }
 
     const removeTab = (id: string) => {
-        setTabs(prev => {
-            const filtered = prev.filter(t => t.id !== id)
+        setTabState(prev => {
+            const filtered = prev.tabs.filter(t => t.id !== id)
 
             // nothing left — fall back to a fresh default tab instead of an empty array
             if (filtered.length === 0) {
                 const fallback = makeDefaultTab()
-                setActiveTabId(fallback.id)
-                return [fallback]
+                return { tabs: [fallback], activeTabId: fallback.id }
             }
 
             // if we just closed the active tab, fall back to another one
-            if (id === activeTabId) {
-                setActiveTabId(filtered[filtered.length - 1].id)
+            return {
+                tabs: filtered,
+                activeTabId: prev.activeTabId === id ? filtered[filtered.length - 1].id : prev.activeTabId,
             }
-            return filtered
         })
     }
 
