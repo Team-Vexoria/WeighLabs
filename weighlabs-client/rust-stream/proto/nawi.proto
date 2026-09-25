@@ -104,7 +104,14 @@ message StreamRequest {
   int32 tick_ms = 2;
   // Restart the test session when it completes instead of ending the stream.
   bool loop_session = 3;
+  string session_id = 4;
 }
+
+message SessionControlRequest {
+  string session_id = 1;
+}
+
+message SessionControlResponse {}
 
 message InstrumentInfo {
   ScaleConfig config = 1;
@@ -119,4 +126,6 @@ message InfoRequest {}
 service NawiTestService {
   rpc GetInstrumentInfo(InfoRequest) returns (InstrumentInfo);
   rpc StreamTest(StreamRequest) returns (stream WeighingFrame);
+  rpc PauseTest(SessionControlRequest) returns (SessionControlResponse);
+  rpc ResumeTest(SessionControlRequest) returns (SessionControlResponse);
 }

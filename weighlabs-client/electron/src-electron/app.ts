@@ -3,7 +3,7 @@ import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import 'dotenv/config'
 import path from 'node:path'
 import { initDb, listTests, getTest, createTest, updateTest, deleteTest, completeTest } from './db/main.ts'
-import { startRustStream, stopRustStream, startNawiStream, stopNawiStream } from './nawi.ts'
+import { startRustStream, stopRustStream, startNawiStream, pauseNawiStream, resumeNawiStream, stopNawiStream } from './nawi.ts'
 import { exportReportPdf, exportReportCsv, exportReportDocx } from './pdf.ts'
 
 // set true before building for production
@@ -59,6 +59,8 @@ app.on("ready", async () => {
 
     // NAWI LIVE STREAM
     ipcMain.handle('nawi:start', (_event, config) => startNawiStream(config))
+    ipcMain.handle('nawi:pause', () => pauseNawiStream())
+    ipcMain.handle('nawi:resume', () => resumeNawiStream())
     ipcMain.handle('nawi:stop', () => stopNawiStream())
 
     // PDF REPORT EXPORT

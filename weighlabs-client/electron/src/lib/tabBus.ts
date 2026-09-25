@@ -32,8 +32,12 @@ export function navigateTo(target: TabTarget) {
 }
 
 export function requestRun(req: RunRequest) {
-    pendingRun = req
-    runHandlers.forEach((handler) => handler(req))
+    let delivered = false
+    runHandlers.forEach((handler) => {
+        handler(req)
+        delivered = true
+    })
+    if (!delivered) pendingRun = req
 }
 
 export function consumePendingRun(): RunRequest | null {

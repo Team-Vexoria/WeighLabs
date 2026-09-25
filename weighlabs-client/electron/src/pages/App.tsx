@@ -29,6 +29,7 @@ export default function App() {
     })
     const { tabs, activeTabId } = tabState
     const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0]
+    const dashboardActive = activeTab?.Label === 'Dashboard'
 
     const setActiveTabId = (id: string) => {
         setTabState(prev => prev.activeTabId === id ? prev : { ...prev, activeTabId: id })
@@ -94,9 +95,14 @@ export default function App() {
                         addTab={addTab}
                         removeTab={removeTab}
                     />
-                    <div className="overflow-auto">
-                        {activeTab?.Component}
+                    <div className={dashboardActive ? 'overflow-auto' : 'hidden'} aria-hidden={!dashboardActive}>
+                        {dashboardContent}
                     </div>
+                    {!dashboardActive && (
+                        <div className="overflow-auto">
+                            {activeTab?.Component}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

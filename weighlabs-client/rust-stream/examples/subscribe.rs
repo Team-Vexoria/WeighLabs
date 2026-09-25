@@ -24,6 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             config: None,
             tick_ms: 50,
             loop_session: false,
+            session_id: "example".to_string(),
         })
         .await?
         .into_inner();

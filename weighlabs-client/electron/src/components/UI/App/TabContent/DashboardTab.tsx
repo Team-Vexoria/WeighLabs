@@ -12,6 +12,7 @@ import {
 import type {
     NawiFrame,
     NawiInstrumentInfo,
+    NawiStreamStatus,
     TestPayload,
     TestRecord,
     TestSummary,
@@ -41,7 +42,7 @@ const CORNER_NAMES: Record<number, string> = {
     5: 'Right',
 }
 
-type StreamState = 'idle' | 'connecting' | 'running' | 'ended' | 'error'
+type StreamState = NawiStreamStatus['state']
 
 type TempUnit = 'K' | 'C' | 'F'
 type WeightUnit = 'KG' | 'G' | 'MG' | 'LBS'
@@ -66,7 +67,7 @@ const weightConvert = (kg: number, unit: WeightUnit) => {
 
 const weightSuffix = (unit: WeightUnit) => (unit === 'KG' ? 'KG' : unit === 'G' ? 'G' : unit === 'MG' ? 'MG' : 'lbs')
 
-function computeSummary(frames: NawiFrame[], startedAtMs: number): TestSummary | null {
+function computeSummary(frames: NawiFrame[], startedAtMs: number, durationMs: number): TestSummary | null {
     if (frames.length === 0) return null
     let stableNonCompliant = 0
     let maxAbs = 0
@@ -81,12 +82,16 @@ function computeSummary(frames: NawiFrame[], startedAtMs: number): TestSummary |
         frames: frames.length,
         startedAt: new Date(startedAtMs).toISOString(),
         finishedAt: new Date().toISOString(),
-        durationMs: Date.now() - startedAtMs,
+        durationMs,
         stableNonCompliant,
         maxAbsErrorE: maxAbs,
         maxMpeE: maxMpe,
         passed: stableNonCompliant === 0 && frames.length > 0,
     }
+}
+
+function getActiveDuration(elapsedBeforePauseMs: number, activeSegmentStartedAtMs: number) {
+    return elapsedBeforePauseMs + (activeSegmentStartedAtMs > 0 ? Date.now() - activeSegmentStartedAtMs : 0)
 }
 
 const MAX_KEPT_FRAMES = 20000
@@ -104,17 +109,24 @@ export function DashboardTab() {
     const [incomplete, setIncomplete] = useState<TestRecord[]>([])
 
     const framesRef = useRef<NawiFrame[]>([])
-    const tokenRef = useRef(0)
+    const activeRunGenerationRef = useRef(0)
+    const lifecycleRef = useRef({ token: 0, runGeneration: 0 })
     const startedAtRef = useRef(0)
+    const elapsedBeforePauseRef = useRef(0)
+    const activeSegmentStartedAtRef = useRef(0)
     const activeTestRef = useRef<TestRecord | null>(null)
     const runTestIdRef = useRef<string | null>(null)
     const runStartedRef = useRef(false)
     const finalizedRef = useRef(false)
 
     const beginRun = useCallback(async (runToken: number, testId: string) => {
+        const generation = ++lifecycleRef.current.runGeneration
+        const isCurrentRun = () =>
+            lifecycleRef.current.token === runToken && lifecycleRef.current.runGeneration === generation
         try {
             const rec = window.tests ? await window.tests.get(testId) : null
-            if (tokenRef.current !== runToken) return
+            if (!isCurrentRun()) return
+            activeRunGenerationRef.current = generation
             activeTestRef.current = rec
             finalizedRef.current = false
             if (rec?.id) {
@@ -128,35 +140,46 @@ export function DashboardTab() {
             framesRef.current = []
             setFrames([])
             setInfo(null)
+            elapsedBeforePauseRef.current = 0
+            activeSegmentStartedAtRef.current = 0
 
             const res = rec ? await window.nawi!.start(rec.payload?.config ?? null) : null
-            if (tokenRef.current !== runToken) return
+            if (!isCurrentRun()) return
             if (!res) throw new Error('No instrument information received from NAWI stream')
             startedAtRef.current = Date.now()
+            activeSegmentStartedAtRef.current = startedAtRef.current
             setInfo(res)
             setSeconds(0)
             setStreamError(null)
             setNotice(null)
         } catch (err) {
-            if (tokenRef.current !== runToken) return
+            if (!isCurrentRun()) return
             setStreamState('error')
             setStreamError(err instanceof Error ? err.message : String(err))
         }
     }, [])
 
     const loadIncomplete = useCallback(async (loadToken: number) => {
-        if (tokenRef.current !== loadToken) return
+        if (lifecycleRef.current.token !== loadToken) return
         const all = window.tests ? await window.tests.list() : []
-        if (tokenRef.current !== loadToken) return
+        if (lifecycleRef.current.token !== loadToken) return
         setIncomplete(all.filter((t) => t.status === 'INC'))
     }, [])
 
-    const finalizeRun = useCallback(async (runToken: number) => {
-        if (finalizedRef.current) return
+    const finalizeRun = useCallback(async (runToken: number, runGeneration: number) => {
+        const isCurrentFinalization = () =>
+            lifecycleRef.current.token === runToken &&
+            lifecycleRef.current.runGeneration === runGeneration &&
+            activeRunGenerationRef.current === runGeneration
+        if (finalizedRef.current || !isCurrentFinalization()) return
         finalizedRef.current = true
         try {
             const captured = framesRef.current
-            const summary = computeSummary(captured, startedAtRef.current)
+            const durationMs = getActiveDuration(
+                elapsedBeforePauseRef.current,
+                activeSegmentStartedAtRef.current,
+            )
+            const summary = computeSummary(captured, startedAtRef.current, durationMs)
             const payload: TestPayload = {
                 ...(activeTestRef.current?.payload ?? {}),
                 frames: captured,
@@ -176,7 +199,7 @@ export function DashboardTab() {
                 status,
                 payload,
             })
-            if (tokenRef.current !== runToken) return
+            if (!isCurrentFinalization()) return
             if (record?.id) {
                 addHistory({
                     type: 'test',
@@ -192,35 +215,54 @@ export function DashboardTab() {
             )
             void loadIncomplete(runToken)
         } catch (err) {
-            if (tokenRef.current !== runToken) return
+            if (!isCurrentFinalization()) return
             finalizedRef.current = false
             setStreamError(err instanceof Error ? err.message : String(err))
         }
     }, [loadIncomplete])
 
     useEffect(() => {
-        const token = ++tokenRef.current
+        const ownerLifecycle = lifecycleRef.current
+        const token = ++ownerLifecycle.token
+        ++ownerLifecycle.runGeneration
 
         const unSubFrame = window.nawi?.onFrame((frame) => {
-            if (tokenRef.current !== token) return
+            if (lifecycleRef.current.token !== token) return
             setFrames((prev) => {
                 const next =
                     prev.length >= MAX_KEPT_FRAMES
                         ? [...prev.slice(prev.length - MAX_KEPT_FRAMES + 1), frame]
                         : [...prev, frame]
+                framesRef.current = next
                 return next
             })
         })
         const unSubStatus = window.nawi?.onStatus((status) => {
-            if (tokenRef.current !== token) return
+            if (lifecycleRef.current.token !== token) return
             setStreamState(status.state)
             if (status.message) setStreamError(status.message)
+            if (
+                (status.state === 'paused' || status.state === 'ended' || status.state === 'error') &&
+                activeSegmentStartedAtRef.current > 0
+            ) {
+                elapsedBeforePauseRef.current += Date.now() - activeSegmentStartedAtRef.current
+                activeSegmentStartedAtRef.current = 0
+            }
+            if (status.state === 'paused') {
+                setSeconds(Math.floor(elapsedBeforePauseRef.current / 1000))
+            } else if (
+                status.state === 'running' &&
+                runTestIdRef.current &&
+                activeSegmentStartedAtRef.current === 0
+            ) {
+                activeSegmentStartedAtRef.current = Date.now()
+            }
             if (status.state === 'ended' && runTestIdRef.current && !finalizedRef.current) {
-                void finalizeRun(token)
+                void finalizeRun(token, activeRunGenerationRef.current)
             }
         })
         const unSubRun = onRunRequest((req) => {
-            if (tokenRef.current !== token) return
+            if (lifecycleRef.current.token !== token) return
             runTestIdRef.current = req.testId
             runStartedRef.current = true
             void beginRun(token, req.testId)
@@ -238,29 +280,36 @@ export function DashboardTab() {
         void loadIncomplete(token)
 
         return () => {
-            tokenRef.current += 1
+            const cleanupToken = ++ownerLifecycle.token
             unSubFrame?.()
             unSubStatus?.()
             unSubRun?.()
-            window.nawi?.stop()
+            window.setTimeout(() => {
+                if (ownerLifecycle.token === cleanupToken) {
+                    void window.nawi?.stop()
+                }
+            }, 0)
         }
     }, [beginRun, finalizeRun, loadIncomplete])
 
     useEffect(() => {
-        framesRef.current = frames
-    }, [frames])
-
-    useEffect(() => {
         if (streamState !== 'running') return
         const t = setInterval(() => {
-            setSeconds(Math.floor((Date.now() - startedAtRef.current) / 1000))
+            setSeconds(
+                Math.floor(
+                    getActiveDuration(
+                        elapsedBeforePauseRef.current,
+                        activeSegmentStartedAtRef.current,
+                    ) / 1000,
+                ),
+            )
         }, 1000)
         return () => clearInterval(t)
     }, [streamState])
 
     const latest = frames[frames.length - 1]
     const firstMs = frames.length > 0 ? frames[0].timestampMs : 0
-    const running = streamState === 'connecting' || streamState === 'running'
+    const testActive = streamState === 'connecting' || streamState === 'running' || streamState === 'paused'
     const idle = streamState === 'idle'
 
     const timeSeries = frames.map((f, i) => ({
@@ -290,23 +339,44 @@ export function DashboardTab() {
     const rerunTest = () => {
         if (!runTestIdRef.current) return
         runStartedRef.current = true
-        void beginRun(tokenRef.current, runTestIdRef.current)
+        void beginRun(lifecycleRef.current.token, runTestIdRef.current)
     }
 
     const runIncomplete = (testId: string) => {
         runTestIdRef.current = testId
         runStartedRef.current = true
-        void beginRun(tokenRef.current, testId)
+        void beginRun(lifecycleRef.current.token, testId)
+    }
+
+    const setPaused = async (paused: boolean) => {
+        if (busy) return
+        setBusy(true)
+        setStreamError(null)
+        try {
+            if (!window.nawi) throw new Error('NAWI stream is unavailable')
+            if (paused) await window.nawi.pause()
+            else await window.nawi.resume()
+        } catch (err) {
+            setStreamError(err instanceof Error ? err.message : String(err))
+        } finally {
+            setBusy(false)
+        }
     }
 
     const endTest = () => {
-        if (!runTestIdRef.current || busy) return
+        if (!runTestIdRef.current || busy || streamState === 'connecting') return
         if (!window.confirm('End this test and save it as a report?')) return
         void (async () => {
             setBusy(true)
+            const runGeneration = ++lifecycleRef.current.runGeneration
+            activeRunGenerationRef.current = runGeneration
+            if (activeSegmentStartedAtRef.current > 0) {
+                elapsedBeforePauseRef.current += Date.now() - activeSegmentStartedAtRef.current
+                activeSegmentStartedAtRef.current = 0
+            }
             try {
                 await window.nawi?.stop()
-                await finalizeRun(tokenRef.current)
+                await finalizeRun(lifecycleRef.current.token, runGeneration)
             } finally {
                 setBusy(false)
             }
@@ -318,7 +388,11 @@ export function DashboardTab() {
         setBusy(true)
         try {
             const f = framesRef.current
-            const summary = computeSummary(f, startedAtRef.current)
+            const durationMs = getActiveDuration(
+                elapsedBeforePauseRef.current,
+                activeSegmentStartedAtRef.current,
+            )
+            const summary = computeSummary(f, startedAtRef.current, durationMs)
             const payload: TestPayload = {
                 ...(activeTestRef.current?.payload ?? {}),
                 frames: f,
@@ -358,12 +432,14 @@ export function DashboardTab() {
                     className={`ml-3 text-[12px] font-mono px-2 py-0.5 rounded-full border ${
                         streamState === 'running'
                             ? 'border-green-500/40 text-green-400'
-                            : streamState === 'error'
-                              ? 'border-red-500/40 text-red-400'
-                              : 'border-yellow-500/40 text-yellow-500'
+                            : streamState === 'paused'
+                              ? 'border-amber-500/40 text-amber-400'
+                              : streamState === 'error'
+                                ? 'border-red-500/40 text-red-400'
+                                : 'border-yellow-500/40 text-yellow-500'
                     }`}
                 >
-                    {streamState === 'running' ? '● LIVE' : streamState === 'connecting' ? '◌ connecting' : streamState === 'error' ? '✕ error' : idle ? '○ idle' : '■ stopped'}
+                    {streamState === 'running' ? '● LIVE' : streamState === 'paused' ? 'PAUSED' : streamState === 'connecting' ? '◌ connecting' : streamState === 'error' ? '✕ error' : idle ? '○ idle' : '■ stopped'}
                 </span>
 
                 {/* BUTTONS */}
@@ -384,12 +460,28 @@ export function DashboardTab() {
                             >
                                 Print
                             </button>
-                            {running ? (
+                            {streamState === 'connecting' ? (
                                 <button
                                     disabled
                                     className="p-ui min-w-20 button border border-white/5 bg-indigo-400/40 dark:bg-indigo-950/40 opacity-50"
                                 >
-                                    Continue Test
+                                    Starting
+                                </button>
+                            ) : streamState === 'running' ? (
+                                <button
+                                    onClick={() => void setPaused(true)}
+                                    disabled={busy}
+                                    className="p-ui min-w-20 button border border-white/5 bg-amber-400 dark:bg-amber-950"
+                                >
+                                    Pause Test
+                                </button>
+                            ) : streamState === 'paused' ? (
+                                <button
+                                    onClick={() => void setPaused(false)}
+                                    disabled={busy}
+                                    className="p-ui min-w-20 button border border-white/5 bg-indigo-400 dark:bg-indigo-950"
+                                >
+                                    Resume Test
                                 </button>
                             ) : (
                                 <button
@@ -402,7 +494,7 @@ export function DashboardTab() {
                             )}
                             <button
                                 onClick={endTest}
-                                disabled={busy}
+                                disabled={busy || streamState === 'connecting'}
                                 className="p-ui min-w-20 button border border-white/5 bg-red-400 dark:bg-red-950"
                             >
                                 End Test
@@ -543,7 +635,7 @@ export function DashboardTab() {
                 </div>
             )}
 
-            {!idle && !running && incomplete.length > 0 && (
+            {!idle && !testActive && incomplete.length > 0 && (
                 <div className="p-ui dashboard-material flex flex-col gap-1">
                     <h2 className="text-[16px]">
                         Incomplete Tests

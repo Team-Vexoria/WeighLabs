@@ -28,9 +28,11 @@ export interface TestsApi {
 
 export interface NawiApi {
     start: (config?: NawiScaleConfig | null) => Promise<NawiInstrumentInfo>
+    pause: () => Promise<void>
+    resume: () => Promise<void>
     stop: () => Promise<void>
     onFrame: (callback: (frame: import('./shared').NawiFrame) => void) => () => void
-    onStatus: (callback: (status: NawiStreamStatus) => void) => () => void
+    onStatus: (callback: (status: import('./shared').NawiStreamStatus) => void) => () => void
 }
 
 export interface ReportsApi {

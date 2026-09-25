@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('tests', {
 
 contextBridge.exposeInMainWorld('nawi', {
     start: (config) => ipcRenderer.invoke('nawi:start', config ?? null),
+    pause: () => ipcRenderer.invoke('nawi:pause'),
+    resume: () => ipcRenderer.invoke('nawi:resume'),
     stop: () => ipcRenderer.invoke('nawi:stop'),
     onFrame: (callback) => {
         const listener = (_event, frame) => callback(frame)

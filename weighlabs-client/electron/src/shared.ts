@@ -108,6 +108,6 @@ export interface ReportPdfResult {
 }
 
 export interface NawiStreamStatus {
-    state: 'idle' | 'connecting' | 'running' | 'ended' | 'error'
+    state: 'idle' | 'connecting' | 'running' | 'paused' | 'ended' | 'error'
     message?: string
 }
