@@ -1,7 +1,8 @@
 import Sidebar from '../components/UI/Sidebar'
 import AppSidebar from '../components/UI/App/Sidebar'
 import Tabbar from '../components/UI/App/Tabbar'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { setNavigator } from '../lib/tabBus'
 
 export interface Tab {
     id: string,
@@ -11,8 +12,9 @@ export interface Tab {
 
 // tab page
 import { newTabContent } from '../components/UI/App/TabContent/New'
-// import { dashboardContent } from '../components/UI/App/TabContent/Dashboard'
-// import { createTestTabContent } from '../components/UI/App/TabContent/CreateTest'
+import { dashboardContent } from '../components/UI/App/TabContent/Dashboard'
+import { createTestTabContent } from '../components/UI/App/TabContent/CreateTest'
+import { viewReportContent } from '../components/UI/App/TabContent/ViewReports'
 
 function makeDefaultTab(): Tab {
     return { id: crypto.randomUUID(), Label: "New Tab", Component: newTabContent }
@@ -59,6 +61,15 @@ export default function App() {
             return filtered
         })
     }
+
+    useEffect(() => {
+        setNavigator((target) => {
+            if (target === 'dashboard') addTab(dashboardContent, 'Dashboard')
+            else if (target === 'create-test') addTab(createTestTabContent, 'Create Test')
+            else if (target === 'view-reports') addTab(viewReportContent, 'View Reports')
+        })
+        return () => setNavigator(null)
+    }, [])
 
     return (
         <div className="page flex flex-col h-full">

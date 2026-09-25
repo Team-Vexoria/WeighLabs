@@ -1,0 +1,38 @@
+export type TabTarget = 'dashboard' | 'create-test' | 'view-reports'
+
+export interface RunRequest {
+    testId: string
+}
+
+type NavHandler = (target: TabTarget) => void
+type RunHandler = (req: RunRequest) => void
+
+let navHandler: NavHandler | null = null
+let pendingRun: RunRequest | null = null
+const runHandlers = new Set<RunHandler>()
+
+export function setNavigator(handler: NavHandler | null) {
+    navHandler = handler
+}
+
+export function navigateTo(target: TabTarget) {
+    navHandler?.(target)
+}
+
+export function requestRun(req: RunRequest) {
+    pendingRun = req
+    runHandlers.forEach((handler) => handler(req))
+}
+
+export function consumePendingRun(): RunRequest | null {
+    const req = pendingRun
+    pendingRun = null
+    return req
+}
+
+export function onRunRequest(handler: RunHandler): () => void {
+    runHandlers.add(handler)
+    return () => {
+        runHandlers.delete(handler)
+    }
+}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { NawiScaleConfig, TestPayload } from '../../../../shared'
+import type { NawiScaleConfig, TestPayload, TestRecord } from '../../../../shared'
+import { requestRun, navigateTo } from '../../../../lib/tabBus'
 
 /* Reusable labeled field, styled to match the existing design tokens */
 const Field = ({
@@ -164,8 +165,36 @@ export function CreateTestTab() {
         setNotice(null)
     }
 
-    const persist = async (label: string) => {
-        setSaving(true)
+    const autofill = () => {
+        setForm({
+            ...initialForm,
+            instrumentType: 'Electronic Scale',
+            modelDesignation: 'XK3190-A12E',
+            serialNumber: 'SN-2026-0001',
+            accuracyClass: 'Class III (Medium)',
+            maxCapacity: '30',
+            minCapacity: '0.2',
+            verificationInterval: '0.01',
+            actualInterval: '0.01',
+            numberOfIntervals: '3000',
+            manufacturerName: 'Mettler Toledo',
+            manufacturerAddress: 'Im Langacher 44, 8606 Greifensee',
+            manufacturerCountry: 'Switzerland',
+            manufacturerContact: 'contact@mettler-toledo.com',
+            operatorName: 'Dr. Pradeep',
+            operatorLicenseNumber: 'CERT-2026-0456',
+            testDate: new Date().toISOString().slice(0, 10),
+            operatorSignature: 'PRP',
+            labName: 'National Metrology Lab',
+            labAccreditationNumber: 'ISO/IEC 17025 - 00123',
+            labLocation: 'Delhi, India',
+            labConditions: '20°C / 50% RH',
+        })
+        setNotice(null)
+        setError(null)
+    }
+
+    const saveRecord = async (): Promise<TestRecord | null> => {
         setError(null)
         setNotice(null)
         try {
@@ -178,12 +207,35 @@ export function CreateTestTab() {
                 createdAt: new Date().toISOString(),
                 payload,
             })
+            return record ?? null
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err))
+            return null
+        }
+    }
+
+    const persist = async (label: string) => {
+        setSaving(true)
+        try {
+            const record = await saveRecord()
             if (record) {
                 setNotice(`"${record.fileName}" ${label} — it now appears under View Reports.`)
                 setForm(initialForm)
             }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : String(err))
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const createAndRun = async () => {
+        setSaving(true)
+        try {
+            const record = await saveRecord()
+            if (record) {
+                setForm(initialForm)
+                requestRun({ testId: record.id })
+            }
+            navigateTo('dashboard')
         } finally {
             setSaving(false)
         }
@@ -291,6 +343,13 @@ export function CreateTestTab() {
                 <button
                     className="p-2 button border dark:border-main/5 border-main-dark/5"
                     disabled={saving}
+                    onClick={autofill}
+                >
+                    Autofill
+                </button>
+                <button
+                    className="p-2 button border dark:border-main/5 border-main-dark/5"
+                    disabled={saving}
                     onClick={() => persist('saved for later')}
                 >
                     Save for Later
@@ -298,7 +357,7 @@ export function CreateTestTab() {
                 <button
                     className="p-2 button border dark:border-main/5 border-main-dark/5"
                     disabled={saving}
-                    onClick={() => persist('created')}
+                    onClick={createAndRun}
                 >
                     Create Test
                 </button>
