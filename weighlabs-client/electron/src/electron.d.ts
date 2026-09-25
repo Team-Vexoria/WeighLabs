@@ -37,12 +37,17 @@ export interface ReportsApi {
     exportPdf: (input: ReportPdfInput) => Promise<ReportPdfResult>
 }
 
+export interface ThemeApi {
+    set: (theme: 'system' | 'dark' | 'light') => Promise<void>
+}
+
 declare global {
     interface Window {
         windowControls?: WindowControls
         tests?: TestsApi
         nawi?: NawiApi
         reports?: ReportsApi
+        theme?: ThemeApi
     }
 }
 

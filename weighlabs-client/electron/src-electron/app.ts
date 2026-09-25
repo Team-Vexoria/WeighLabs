@@ -63,6 +63,11 @@ app.on("ready", async () => {
     // PDF REPORT EXPORT
     ipcMain.handle('report:export-pdf', (_event, input) => exportReportPdf(input))
 
+    // THEME (dark / light / system)
+    ipcMain.handle('theme:set', (_event, theme: 'system' | 'dark' | 'light') => {
+        nativeTheme.themeSource = theme
+    })
+
     const notifyMaximizeState = () => {
         if (!window.isDestroyed()) {
             window.webContents.send('window:maximize-changed', window.isMaximized())

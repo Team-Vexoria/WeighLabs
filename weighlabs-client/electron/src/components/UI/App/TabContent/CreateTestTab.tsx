@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { NawiScaleConfig, TestPayload, TestRecord } from '../../../../shared'
 import { requestRun, navigateTo } from '../../../../lib/tabBus'
+import { addHistory } from '../../../../lib/history'
 
 /* Reusable labeled field, styled to match the existing design tokens */
 const Field = ({
@@ -207,6 +208,14 @@ export function CreateTestTab() {
                 createdAt: new Date().toISOString(),
                 payload,
             })
+            if (record) {
+                addHistory({
+                    type: 'test',
+                    message: `Test created — ${record.fileName}`,
+                    testId: record.id,
+                    status: 'PENDING',
+                })
+            }
             return record ?? null
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err))

@@ -17,6 +17,7 @@ import type {
     TestSummary,
 } from '../../../../shared'
 import { consumePendingRun, navigateTo, onRunRequest } from '../../../../lib/tabBus'
+import { addHistory, updateTestStatus } from '../../../../lib/history'
 
 const PHASE_NAMES: Record<number, string> = {
     1: 'Warm-up',
@@ -160,6 +161,7 @@ export function DashboardTab() {
                 payload,
             })
             if (tokenRef.current !== runToken) return
+            if (record?.id) updateTestStatus(record.id, status)
             setNotice(
                 `Test ${status === 'PASS' ? 'passed' : 'failed'}${
                     summary ? ` (${summary.frames} frames, ${summary.stableNonCompliant} non-compliant stable)` : ' (no frames captured)'
@@ -296,6 +298,11 @@ export function DashboardTab() {
                 fileName: `Test ${serial} - ${new Date().toLocaleDateString('en-GB')}`,
                 status: summary?.passed ? 'PASS' : 'FAIL',
                 payload,
+            })
+            addHistory({
+                type: 'report',
+                message: `Report exported — Test ${serial}`,
+                status: summary?.passed ? 'PASS' : 'FAIL',
             })
         } finally {
             setBusy(false)

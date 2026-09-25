@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TestRecord, TestStatus } from "../../../../shared";
+import { addHistory } from "../../../../lib/history";
 
 type SortField = "createdAt" | "completedAt";
 type SortDir = "asc" | "desc";
@@ -236,6 +237,13 @@ function ReportDetail({ record, onDelete }: { record: TestRecord; onDelete: () =
                 status: record.status,
                 payload: record.payload ?? {},
             });
+            if (result && !result.cancelled) {
+                addHistory({
+                    type: "report",
+                    message: `Report exported — ${record.fileName}`,
+                    status: record.status === "INC" ? "PENDING" : record.status,
+                });
+            }
             setMessage(
                 result?.cancelled
                     ? "PDF export cancelled."

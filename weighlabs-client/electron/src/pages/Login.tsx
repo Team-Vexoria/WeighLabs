@@ -9,6 +9,8 @@ import ProfileCard from '../components/UI/Login/Profile.tsx'
 
 // login profiles
 import { getProfiles, loginAs, removeProfile, type LoginProfile } from '../lib/profiles'
+// operator activity history
+import { addHistory } from '../lib/history'
 
 const ROLE_OPTIONS = ['Operator', 'Technician', 'Metrologist', 'Admin']
 
@@ -22,6 +24,7 @@ export default function Login() {
 
     const handleQuickLogin = (profile: LoginProfile) => {
         loginAs(profile)
+        addHistory({ type: 'login', message: `Signed in — ${profile.name}` })
         navigate('/app')
     }
 
@@ -32,13 +35,14 @@ export default function Login() {
             return
         }
         setError(null)
-        loginAs({
+        const profile = loginAs({
             id: crypto.randomUUID(),
             name: name.trim(),
             licenceNumber: licence.trim(),
             role: role.trim() || ROLE_OPTIONS[0],
             createdAt: new Date().toISOString(),
         })
+        addHistory({ type: 'login', message: `Signed in — ${profile.name}` })
         navigate('/app')
     }
 
