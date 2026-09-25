@@ -1,8 +1,11 @@
-// import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// export const usersTable = sqliteTable("users_table", {
-//   id: int().primaryKey({ autoIncrement: true }),
-//   name: text().notNull(),
-//   age: int().notNull(),
-//   email: text().notNull().unique(),
-// });
+export const testsTable = sqliteTable("tests", {
+  id: text("id").primaryKey(),
+  fileName: text("fileName").notNull(),
+  status: text("status").notNull().default("INC"),
+  manufacturerId: text("manufacturerId").notNull().default(""),
+  createdAt: text("createdAt").notNull(),
+  completedAt: text("completedAt"),
+  payload: text("payload"),
+});
