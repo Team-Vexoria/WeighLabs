@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TestRecord, TestStatus } from "../../../../shared";
 import { addHistory } from "../../../../lib/history";
+import { openTab } from "../../../../lib/tabBus";
+import { reportView } from "./ReportView";
 
 type SortField = "createdAt" | "completedAt";
 type SortDir = "asc" | "desc";
@@ -41,6 +43,19 @@ export function ViewReports() {
         }
     };
 
+    const openReport = (entry: TestRecord) => {
+        setSelectedId(entry.id);
+        openTab(reportView(entry), entry.fileName);
+    };
+
+    const deleteReport = async (entry: TestRecord) => {
+        if (!window.confirm(`Delete report "${entry.fileName}"?`)) return;
+        await window.tests?.remove(entry.id);
+        addHistory({ type: "report", message: `Report deleted — ${entry.fileName}` });
+        if (selectedId === entry.id) setSelectedId(null);
+        await loadReports(true);
+    };
+
     useEffect(() => {
         if (!window.tests) return;
         window.tests
@@ -54,8 +69,6 @@ export function ViewReports() {
             })
             .finally(() => setLoading(false));
     }, []);
-
-    const selected = reports.find((r) => r.id === selectedId) ?? null;
 
     const manufacturers = useMemo(
         () => Array.from(new Set(reports.map(r => r.manufacturerId))).sort(),
@@ -187,19 +200,27 @@ export function ViewReports() {
                         </div>
                         <div className="p-ui flex flex-col gap-1">
                             {entries.map(entry => (
-                                <button
-                                    key={entry.id}
-                                    onClick={() => setSelectedId(entry.id === selectedId ? null : entry.id)}
-                                    className={`border border-main-dark/10 dark:border-main/10 text-left px-ui py-1 max-w-100 rounded dark:hover:bg-main/10 hover:bg-main-dark/10 flex items-center ${
-                                        selectedId === entry.id ? "dark:bg-main/10 bg-main-dark/10" : ""
-                                    }`}
-                                >
-                                    {entry.fileName}
-                                    <span className="ml-2 text-xs opacity-60">({entry.manufacturerId})</span>
-                                    <span className={`ml-auto font-mono ${statusColor[entry.status]}`}>
-                                        {entry.status}
-                                    </span>
-                                </button>
+                                <div key={entry.id} className="flex items-center gap-1 group">
+                                    <button
+                                        onClick={() => openReport(entry)}
+                                        className={`border border-main-dark/10 dark:border-main/10 text-left px-ui py-1 flex-1 max-w-100 rounded dark:hover:bg-main/10 hover:bg-main-dark/10 flex items-center ${
+                                            selectedId === entry.id ? "dark:bg-main/10 bg-main-dark/10" : ""
+                                        }`}
+                                    >
+                                        {entry.fileName}
+                                        <span className="ml-2 text-xs opacity-60">({entry.manufacturerId})</span>
+                                        <span className={`ml-auto font-mono ${statusColor[entry.status]}`}>
+                                            {entry.status}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => void deleteReport(entry)}
+                                        title={`Delete "${entry.fileName}"`}
+                                        className="size-6 shrink-0 rounded-ui border border-main-dark/10 dark:border-main/10 bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-40 hover:!opacity-100 flex items-center justify-center"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -215,101 +236,6 @@ export function ViewReports() {
                     <p className="opacity-60 mt-5">Loading reports…</p>
                 )}
             </div>
-
-            {selected && <ReportDetail record={selected} onDelete={() => void loadReports(true)} />}
-        </div>
-    );
-}
-
-function ReportDetail({ record, onDelete }: { record: TestRecord; onDelete: () => void }) {
-    const [exporting, setExporting] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
-
-    const frames = record.payload?.frames ?? [];
-    const summary = record.payload?.summary ?? null;
-
-    const doExport = async () => {
-        setExporting(true);
-        setMessage(null);
-        try {
-            const result = await window.reports?.exportPdf({
-                fileName: record.fileName,
-                status: record.status,
-                payload: record.payload ?? {},
-            });
-            if (result && !result.cancelled) {
-                addHistory({
-                    type: "report",
-                    message: `Report exported — ${record.fileName}`,
-                    status: record.status === "INC" ? "PENDING" : record.status,
-                });
-            }
-            setMessage(
-                result?.cancelled
-                    ? "PDF export cancelled."
-                    : result?.path
-                      ? `PDF saved to ${result.path}`
-                      : "PDF export failed.",
-            );
-        } catch (err) {
-            setMessage(err instanceof Error ? err.message : String(err));
-        } finally {
-            setExporting(false);
-        }
-    };
-
-    const doDelete = async () => {
-        if (!window.confirm(`Delete report "${record.fileName}"?`)) return;
-        await window.tests?.remove(record.id);
-        onDelete();
-    };
-
-    return (
-        <div className="mt-5 p-ui rounded-ui border border-main-dark/10 dark:border-main/10">
-            <h2 className="text-xl mb-2">{record.fileName}</h2>
-            <div className="flex flex-wrap gap-1 mb-3">
-                <button
-                    onClick={doExport}
-                    disabled={exporting}
-                    className="px-ui py-1 border dark:border-main/10 border-main-dark/10 rounded bg-main/10 dark:hover:bg-main/10 hover:bg-main-dark/10"
-                >
-                    {exporting ? "Exporting…" : "Export PDF"}
-                </button>
-                <button
-                    onClick={doDelete}
-                    className="px-ui py-1 border border-red-500/40 rounded bg-red-500/10 text-red-400"
-                >
-                    Delete
-                </button>
-            </div>
-
-            {message && <p className="opacity-80 mb-2 text-sm">{message}</p>}
-
-            {summary && frames.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                    <Detail label="Frames captured" value={String(summary.frames)} />
-                    <Detail label="Duration" value={`${(summary.durationMs / 1000).toFixed(1)} s`} />
-                    <Detail label="Stable non-compliant frames" value={String(summary.stableNonCompliant)} />
-                    <Detail label="Max absolute error" value={`${summary.maxAbsErrorE.toFixed(3)} e`} />
-                    <Detail label="Max permissible error" value={`${summary.maxMpeE.toFixed(3)} e`} />
-                    <Detail label="Completed" value={record.completedAt ? new Date(record.completedAt).toLocaleString() : "—"} />
-                </div>
-            ) : (
-                <p className="opacity-60 text-sm">
-                    {record.status === "INC"
-                        ? "This test has not been run yet — open the Dashboard, run the test, then End Test to attach data."
-                        : "No captured sample data for this report."}
-                </p>
-            )}
-        </div>
-    );
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="p-ui rounded-ui dark:bg-main/5 bg-main-dark/5">
-            <h3 className="text-[12px] opacity-50">{label}</h3>
-            <p className="font-mono">{value}</p>
         </div>
     );
 }

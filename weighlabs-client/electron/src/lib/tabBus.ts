@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export type TabTarget = 'dashboard' | 'create-test' | 'view-reports'
 
 export interface RunRequest {
@@ -6,13 +8,23 @@ export interface RunRequest {
 
 type NavHandler = (target: TabTarget) => void
 type RunHandler = (req: RunRequest) => void
+type TabOpener = (content: ReactNode, label: string) => void
 
 let navHandler: NavHandler | null = null
+let tabOpener: TabOpener | null = null
 let pendingRun: RunRequest | null = null
 const runHandlers = new Set<RunHandler>()
 
 export function setNavigator(handler: NavHandler | null) {
     navHandler = handler
+}
+
+export function setTabOpener(handler: TabOpener | null) {
+    tabOpener = handler
+}
+
+export function openTab(content: ReactNode, label: string) {
+    tabOpener?.(content, label)
 }
 
 export function navigateTo(target: TabTarget) {

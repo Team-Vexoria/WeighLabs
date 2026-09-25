@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
     CartesianGrid,
     Line,
@@ -17,7 +17,7 @@ import type {
     TestSummary,
 } from '../../../../shared'
 import { consumePendingRun, navigateTo, onRunRequest } from '../../../../lib/tabBus'
-import { addHistory, updateTestStatus } from '../../../../lib/history'
+import { addHistory } from '../../../../lib/history'
 
 const PHASE_NAMES: Record<number, string> = {
     1: 'Warm-up',
@@ -101,6 +101,7 @@ export function DashboardTab() {
     const [weightUnit, setWeightUnit] = useState<WeightUnit>('KG')
     const [notice, setNotice] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
+    const [incomplete, setIncomplete] = useState<TestRecord[]>([])
 
     const framesRef = useRef<NawiFrame[]>([])
     const tokenRef = useRef(0)
@@ -110,12 +111,20 @@ export function DashboardTab() {
     const runStartedRef = useRef(false)
     const finalizedRef = useRef(false)
 
-    const beginRun = async (runToken: number, testId: string) => {
+    const beginRun = useCallback(async (runToken: number, testId: string) => {
         try {
             const rec = window.tests ? await window.tests.get(testId) : null
             if (tokenRef.current !== runToken) return
             activeTestRef.current = rec
             finalizedRef.current = false
+            if (rec?.id) {
+                addHistory({
+                    type: 'test',
+                    message: `Test run started — ${rec.fileName}`,
+                    testId: rec.id,
+                    status: 'PENDING',
+                })
+            }
             framesRef.current = []
             setFrames([])
             setInfo(null)
@@ -133,9 +142,16 @@ export function DashboardTab() {
             setStreamState('error')
             setStreamError(err instanceof Error ? err.message : String(err))
         }
-    }
+    }, [])
 
-    const finalizeRun = async (runToken: number) => {
+    const loadIncomplete = useCallback(async (loadToken: number) => {
+        if (tokenRef.current !== loadToken) return
+        const all = window.tests ? await window.tests.list() : []
+        if (tokenRef.current !== loadToken) return
+        setIncomplete(all.filter((t) => t.status === 'INC'))
+    }, [])
+
+    const finalizeRun = useCallback(async (runToken: number) => {
         if (finalizedRef.current) return
         finalizedRef.current = true
         try {
@@ -161,18 +177,26 @@ export function DashboardTab() {
                 payload,
             })
             if (tokenRef.current !== runToken) return
-            if (record?.id) updateTestStatus(record.id, status)
+            if (record?.id) {
+                addHistory({
+                    type: 'test',
+                    message: `Test ${status === 'PASS' ? 'passed' : 'failed'} — ${record.fileName}`,
+                    testId: record.id,
+                    status,
+                })
+            }
             setNotice(
                 `Test ${status === 'PASS' ? 'passed' : 'failed'}${
                     summary ? ` (${summary.frames} frames, ${summary.stableNonCompliant} non-compliant stable)` : ' (no frames captured)'
                 } — "${record?.fileName}" saved to View Reports.`,
             )
+            void loadIncomplete(runToken)
         } catch (err) {
             if (tokenRef.current !== runToken) return
             finalizedRef.current = false
             setStreamError(err instanceof Error ? err.message : String(err))
         }
-    }
+    }, [loadIncomplete])
 
     useEffect(() => {
         const token = ++tokenRef.current
@@ -211,6 +235,7 @@ export function DashboardTab() {
             // re-armed after a strict-mode remount while a run was pending
             void beginRun(token, runTestIdRef.current)
         }
+        void loadIncomplete(token)
 
         return () => {
             tokenRef.current += 1
@@ -219,7 +244,7 @@ export function DashboardTab() {
             unSubRun?.()
             window.nawi?.stop()
         }
-    }, [])
+    }, [beginRun, finalizeRun, loadIncomplete])
 
     useEffect(() => {
         framesRef.current = frames
@@ -266,6 +291,12 @@ export function DashboardTab() {
         if (!runTestIdRef.current) return
         runStartedRef.current = true
         void beginRun(tokenRef.current, runTestIdRef.current)
+    }
+
+    const runIncomplete = (testId: string) => {
+        runTestIdRef.current = testId
+        runStartedRef.current = true
+        void beginRun(tokenRef.current, testId)
     }
 
     const endTest = () => {
@@ -394,22 +425,33 @@ export function DashboardTab() {
 
             <div className="flex gap-dashboard">
                 {idle ? (
-                    <div className="flex-5 h-100 dashboard-material flex items-center justify-center">
-                        <div className="text-center flex flex-col gap-3">
-                            <h2 className="text-2xl">No test is running</h2>
-                            <p className="opacity-60 max-w-80 mx-auto">
-                                Create a test instance to start streaming live NAWI data from rust-stream into the dashboard.
-                            </p>
-                            <div>
-                                <button
-                                    onClick={() => navigateTo('create-test')}
-                                    className="p-ui min-w-32 button border border-white/5 bg-indigo-400 dark:bg-indigo-950"
-                                >
-                                    Create Test
-                                </button>
+                    <>
+                        <div className="flex-1 h-100 dashboard-material flex items-center justify-center">
+                            <div className="text-center flex flex-col gap-3">
+                                <h2 className="text-2xl">No test is running</h2>
+                                <p className="opacity-60 max-w-80 mx-auto">
+                                    Create a test instance to start streaming live NAWI data from rust-stream into the dashboard.
+                                </p>
+                                <div>
+                                    <button
+                                        onClick={() => navigateTo('create-test')}
+                                        className="p-ui min-w-32 button border border-white/5 bg-indigo-400 dark:bg-indigo-950"
+                                    >
+                                        Create Test
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                        <div className="flex-1 h-100 dashboard-material p-ui flex flex-col">
+                            <h2 className="text-2xl mb-1">
+                                Incomplete Tests
+                                {incomplete.length > 0 && <span className="text-indigo-400"> ({incomplete.length})</span>}
+                            </h2>
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                                <IncompleteList records={incomplete} onRun={runIncomplete} />
+                            </div>
+                        </div>
+                    </>
                 ) : (
                     <>
                         {/* GRAPH — indication error vs time */}
@@ -500,7 +542,52 @@ export function DashboardTab() {
                     </div>
                 </div>
             )}
+
+            {!idle && !running && incomplete.length > 0 && (
+                <div className="p-ui dashboard-material flex flex-col gap-1">
+                    <h2 className="text-[16px]">
+                        Incomplete Tests
+                        <span className="text-indigo-400"> ({incomplete.length})</span>
+                    </h2>
+                    <div className="max-h-40 min-h-0 overflow-y-auto">
+                        <IncompleteList records={incomplete} onRun={runIncomplete} />
+                    </div>
+                </div>
+            )}
         </div>
+    )
+}
+
+function IncompleteList({ records, onRun }: { records: TestRecord[]; onRun: (testId: string) => void }) {
+    if (records.length === 0) {
+        return (
+            <p className="opacity-50 text-sm">
+                No incomplete tests. Tests saved for later from Create Test will appear here to pick up and run.
+            </p>
+        )
+    }
+    return (
+        <ul className="flex flex-col gap-1">
+            {records.map((t) => (
+                <li
+                    key={t.id}
+                    className="flex items-center gap-2 p-ui rounded-ui border border-white/5 bg-white/5 dark:bg-white/5"
+                >
+                    <span className="flex-1 min-w-0">
+                        <span className="block truncate text-sm">{t.fileName}</span>
+                        <span className="block text-[12px] opacity-50 font-mono">
+                            {new Date(t.createdAt).toLocaleString()} · {t.payload?.config?.serialNumber ?? 'no serial'}
+                        </span>
+                    </span>
+                    <button
+                        onClick={() => onRun(t.id)}
+                        className="p-ui min-w-16 button border border-white/5 bg-indigo-400 dark:bg-indigo-950 text-sm"
+                    >
+                        Run
+                    </button>
+                </li>
+            ))}
+        </ul>
     )
 }
 

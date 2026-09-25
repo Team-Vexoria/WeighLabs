@@ -1,5 +1,7 @@
 import { BrowserWindow, app, dialog } from 'electron'
 import fs from 'node:fs'
+import path from 'node:path'
+import { Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx'
 import type { NawiFrame, ReportPdfInput } from '../src/shared'
 
 interface SeriesPoint {
@@ -285,5 +287,214 @@ export async function exportReportPdf(input: ReportPdfInput): Promise<{ path: st
   }
 
   await writeReportPdf(input, filePath)
+  return { path: filePath, cancelled: false }
+}
+
+/* ---------------------------------------------------------------- */
+/* CSV export                                                       */
+/* ---------------------------------------------------------------- */
+
+function csvCell(value: unknown): string {
+  const str = String(value ?? '')
+  return /[",\n\r]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str
+}
+
+export async function writeReportCsv(input: ReportPdfInput, filePath: string): Promise<void> {
+  const payload = input.payload ?? {}
+  const frames: NawiFrame[] = payload.frames ?? []
+  const summary = payload.summary ?? null
+  const config = payload.config ?? null
+
+  const lines: string[] = []
+  lines.push(csvCell('WeighLabs NAWI Verification Report'))
+  lines.push(csvCell('Report'), csvCell(input.fileName))
+  lines.push(csvCell('Status'), csvCell(input.status))
+  if (config) {
+    lines.push(csvCell('Serial Number'), csvCell(config.serialNumber))
+    lines.push(csvCell('Model'), csvCell(config.model))
+  }
+  if (summary) {
+    lines.push(csvCell('Summary'), csvCell(summary.passed ? 'PASS' : 'FAIL'))
+    lines.push(csvCell('Frames'), csvCell(summary.frames))
+    lines.push(csvCell('Duration (s)'), csvCell((summary.durationMs / 1000).toFixed(1)))
+    lines.push(csvCell('Stable non-compliant'), csvCell(summary.stableNonCompliant))
+    lines.push(csvCell('Max abs error (e)'), csvCell(summary.maxAbsErrorE.toFixed(3)))
+    lines.push(csvCell('Max MPE (e)'), csvCell(summary.maxMpeE.toFixed(3)))
+  }
+  lines.push('')
+  lines.push(
+    [
+      'Sequence', 'Timestamp (ms)', 'Phase', 'Point', 'Corner', 'Gross', 'Tare', 'Net', 'Stable',
+      'Temperature (C)', 'Humidity (%)', 'Voltage (V)', 'Error (e)', 'MPE (e)', 'Compliant',
+    ].map(csvCell).join(','),
+  )
+  for (const f of frames) {
+    lines.push(
+      [
+        f.sequence, f.timestampMs, f.phase, f.loadPoint?.label ?? '', f.corner,
+        f.gross, f.tare, f.net, f.stable ? 'yes' : 'no', f.temperatureC, f.humidityRh,
+        f.supplyVoltageV, f.indicatedErrorE, f.maxPermissibleErrorE, f.eCompliant ? 'yes' : 'no',
+      ].map(csvCell).join(','),
+    )
+  }
+
+  await fs.promises.writeFile(filePath, lines.join('\r\n') + '\r\n', 'utf8')
+}
+
+export async function exportReportCsv(input: ReportPdfInput): Promise<{ path: string | null; cancelled: boolean }> {
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Export Test Report as CSV',
+    defaultPath: path.join(app.getPath('documents'), `${input.fileName}.csv`),
+    filters: [{ name: 'CSV spreadsheet', extensions: ['csv'] }],
+  })
+  if (canceled || !filePath) {
+    return { path: null, cancelled: true }
+  }
+
+  await writeReportCsv(input, filePath)
+  return { path: filePath, cancelled: false }
+}
+
+/* ---------------------------------------------------------------- */
+/* DOCX export                                                      */
+/* ---------------------------------------------------------------- */
+
+function kvRow(label: string, value: string): TableRow {
+  return new TableRow({
+    children: [
+      new TableCell({
+        width: { size: 40, type: WidthType.PERCENTAGE },
+        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true })] })],
+      }),
+      new TableCell({
+        width: { size: 60, type: WidthType.PERCENTAGE },
+        children: [new Paragraph(String(value ?? ''))],
+      }),
+    ],
+  })
+}
+
+function kvTable(rows: Record<string, string>): Table {
+  const entries = Object.entries(rows).filter(([, v]) => v !== '' && v !== undefined)
+  const tableRows =
+    entries.length === 0
+      ? [new TableRow({ children: [new TableCell({ children: [new Paragraph('No information recorded')] })] })]
+      : entries.map(([k, v]) => kvRow(k, v))
+  return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: tableRows })
+}
+
+export async function writeReportDocx(input: ReportPdfInput, filePath: string): Promise<void> {
+  const payload = input.payload ?? {}
+  const frames: NawiFrame[] = payload.frames ?? []
+  const summary = payload.summary ?? null
+  const config = payload.config ?? null
+  const instrument = payload.instrument ?? {}
+  const manufacturer = payload.manufacturer ?? {}
+  const operator = payload.operator ?? {}
+  const laboratory = payload.laboratory ?? {}
+
+  const children: (Paragraph | Table)[] = []
+
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(input.fileName)] }))
+  children.push(new Paragraph({ children: [new TextRun(`Status: ${input.status}`)] }))
+  children.push(
+    new Paragraph({ children: [new TextRun(`Generated ${new Date().toLocaleString()} · WeighLabs NAWI Verification Report`)] }),
+  )
+
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Summary')] }))
+  if (summary && frames.length > 0) {
+    children.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          kvRow('Status', summary.passed ? 'PASS' : 'FAIL'),
+          kvRow('Frames captured', String(summary.frames)),
+          kvRow('Duration (s)', (summary.durationMs / 1000).toFixed(1)),
+          kvRow('Stable non-compliant frames', String(summary.stableNonCompliant)),
+          kvRow('Max absolute error (e)', summary.maxAbsErrorE.toFixed(3)),
+          kvRow('Max permissible error (e)', summary.maxMpeE.toFixed(3)),
+        ],
+      }),
+    )
+  } else {
+    children.push(new Paragraph('Test not completed yet — no summary available.'))
+  }
+
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Scale Configuration')] }))
+  if (config) {
+    children.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          kvRow('Serial number', config.serialNumber),
+          kvRow('Model', config.model),
+          kvRow('Max capacity', String(config.maxCapacity)),
+          kvRow('Min capacity', String(config.minCapacity)),
+          kvRow('Verification interval (e)', String(config.verificationInterval)),
+          kvRow('Actual interval (d)', String(config.actualInterval)),
+          kvRow('Number of intervals (n)', String(config.numberOfIntervals)),
+        ],
+      }),
+    )
+  } else {
+    children.push(new Paragraph('No scale configuration recorded.'))
+  }
+
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Instrument Information')] }))
+  children.push(kvTable(instrument))
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Manufacturer')] }))
+  children.push(kvTable(manufacturer))
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Operator')] }))
+  children.push(kvTable(operator))
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Laboratory')] }))
+  children.push(kvTable(laboratory))
+
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Phase Timeline')] }))
+  const stableSample = frames
+    .filter((f) => f.stable)
+    .filter((_, i, arr) => i % Math.max(1, Math.floor(arr.length / 40)) === 0)
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: ['Phase', 'Point', 'Reference (kg)', 'Net (kg)', 'Temp (C)', 'Voltage (V)', 'Error (e)', 'MPE (e)', 'Compliant']
+      .map((h) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })),
+  })
+  const frameRows = stableSample.map(
+    (f) =>
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph(String(f.phase))] }),
+          new TableCell({ children: [new Paragraph(f.loadPoint?.label ?? '')] }),
+          new TableCell({ children: [new Paragraph((f.loadPoint?.referenceLoad ?? 0).toFixed(3))] }),
+          new TableCell({ children: [new Paragraph(f.net.toFixed(3))] }),
+          new TableCell({ children: [new Paragraph(f.temperatureC.toFixed(1))] }),
+          new TableCell({ children: [new Paragraph(f.supplyVoltageV.toFixed(1))] }),
+          new TableCell({ children: [new Paragraph(f.indicatedErrorE.toFixed(3))] }),
+          new TableCell({ children: [new Paragraph(f.maxPermissibleErrorE.toFixed(3))] }),
+          new TableCell({ children: [new Paragraph(f.eCompliant ? 'yes' : 'no')] }),
+        ],
+      }),
+  )
+  children.push(
+    stableSample.length === 0
+      ? new Paragraph('No stable samples captured.')
+      : new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...frameRows] }),
+  )
+
+  const doc = new Document({ sections: [{ children }] })
+  const buffer = await Packer.toBuffer(doc)
+  await fs.promises.writeFile(filePath, buffer)
+}
+
+export async function exportReportDocx(input: ReportPdfInput): Promise<{ path: string | null; cancelled: boolean }> {
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Export Test Report as DOCX',
+    defaultPath: path.join(app.getPath('documents'), `${input.fileName}.docx`),
+    filters: [{ name: 'Word document', extensions: ['docx'] }],
+  })
+  if (canceled || !filePath) {
+    return { path: null, cancelled: true }
+  }
+
+  await writeReportDocx(input, filePath)
   return { path: filePath, cancelled: false }
 }

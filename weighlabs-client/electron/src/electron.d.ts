@@ -35,6 +35,8 @@ export interface NawiApi {
 
 export interface ReportsApi {
     exportPdf: (input: ReportPdfInput) => Promise<ReportPdfResult>
+    exportCsv: (input: ReportPdfInput) => Promise<ReportPdfResult>
+    exportDocx: (input: ReportPdfInput) => Promise<ReportPdfResult>
 }
 
 export interface ThemeApi {

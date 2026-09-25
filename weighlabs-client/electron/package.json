@@ -1,5 +1,5 @@
 {
-  "name": "electron",
+  "name": "weighlabs",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,6 +15,7 @@
     "@grpc/proto-loader": "^0.8.1",
     "@libsql/client": "^0.18.0",
     "@tailwindcss/vite": "^4.3.3",
+    "docx": "^9.7.2",
     "drizzle-orm": "^1.0.0-rc.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

@@ -4,7 +4,7 @@ import 'dotenv/config'
 import path from 'node:path'
 import { initDb, listTests, getTest, createTest, updateTest, deleteTest, completeTest } from './db/main.ts'
 import { startRustStream, stopRustStream, startNawiStream, stopNawiStream } from './nawi.ts'
-import { exportReportPdf } from './pdf.ts'
+import { exportReportPdf, exportReportCsv, exportReportDocx } from './pdf.ts'
 
 // set true before building for production
 const isDev = true
@@ -20,6 +20,7 @@ app.on("ready", async () => {
         minWidth: 1280,
         minHeight: 720,
         frame: false,
+        title: 'WeighLabs',
         autoHideMenuBar: true,
         icon: path.join(import.meta.dirname, "images", "icon.png"),
         webPreferences: {
@@ -62,6 +63,8 @@ app.on("ready", async () => {
 
     // PDF REPORT EXPORT
     ipcMain.handle('report:export-pdf', (_event, input) => exportReportPdf(input))
+    ipcMain.handle('report:export-csv', (_event, input) => exportReportCsv(input))
+    ipcMain.handle('report:export-docx', (_event, input) => exportReportDocx(input))
 
     // THEME (dark / light / system)
     ipcMain.handle('theme:set', (_event, theme: 'system' | 'dark' | 'light') => {

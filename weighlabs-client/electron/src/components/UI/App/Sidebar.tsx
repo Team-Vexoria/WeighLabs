@@ -56,8 +56,16 @@ export default function Sidebar({ addTab }: SidebarProps) {
     const navigate = useNavigate()
     const [profile] = useState(() => getCurrentProfile())
     const [history, setHistory] = useState<HistoryEntry[]>(() => getHistory())
+    const [unread, setUnread] = useState(0)
 
-    useEffect(() => onHistoryChange(() => setHistory(getHistory())), [])
+    useEffect(
+        () =>
+            onHistoryChange(() => {
+                setHistory(getHistory())
+                setUnread((n) => n + 1)
+            }),
+        [],
+    )
 
     const initials =
         profile?.name
@@ -80,6 +88,7 @@ export default function Sidebar({ addTab }: SidebarProps) {
     const handleClearHistory = () => {
         if (window.confirm('Delete the entire history?')) {
             clearHistory()
+            setUnread(0)
         }
     }
 
@@ -145,9 +154,23 @@ export default function Sidebar({ addTab }: SidebarProps) {
                 </div>
 
                 {/* RECENT (HISTORY) */}
-                <div className="p-ui border-t border-border/10 dark:border-border-dark/10 flex flex-col">
-                    <div className="flex items-center justify-between">
-                        <h1>Recent</h1>
+                <div
+                    className="p-ui border-t border-border/10 dark:border-border-dark/10 flex flex-col"
+                    onMouseEnter={() => setUnread(0)}
+                >
+                    <div
+                        className={`flex items-center justify-between ${
+                            unread > 0 ? 'animate-pulse' : ''
+                        }`}
+                    >
+                        <h1 className="flex items-center gap-1.5 text-indigo-500 dark:text-indigo-400">
+                            Recent
+                            {unread > 0 && (
+                                <span className="size-5 rounded-full bg-indigo-500 text-white text-[10px] font-mono flex items-center justify-center">
+                                    {unread > 99 ? '99+' : unread}
+                                </span>
+                            )}
+                        </h1>
                         {history.length > 0 && (
                             <button
                                 onClick={handleClearHistory}

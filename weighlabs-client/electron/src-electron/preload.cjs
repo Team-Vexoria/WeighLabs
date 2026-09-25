@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld('nawi', {
 
 contextBridge.exposeInMainWorld('reports', {
     exportPdf: (input) => ipcRenderer.invoke('report:export-pdf', input),
+    exportCsv: (input) => ipcRenderer.invoke('report:export-csv', input),
+    exportDocx: (input) => ipcRenderer.invoke('report:export-docx', input),
 })
 
 contextBridge.exposeInMainWorld('theme', {
