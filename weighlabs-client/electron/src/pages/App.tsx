@@ -2,7 +2,7 @@ import Sidebar from '../components/UI/Sidebar'
 import AppSidebar from '../components/UI/App/Sidebar'
 import Tabbar from '../components/UI/App/Tabbar'
 import { useEffect, useState } from 'react'
-import { setNavigator } from '../lib/tabBus'
+import { setNavigator, setTabOpener } from '../lib/tabBus'
 
 export interface Tab {
     id: string,
@@ -68,7 +68,11 @@ export default function App() {
             else if (target === 'create-test') addTab(createTestTabContent, 'Create Test')
             else if (target === 'view-reports') addTab(viewReportContent, 'View Reports')
         })
-        return () => setNavigator(null)
+        setTabOpener(addTab)
+        return () => {
+            setNavigator(null)
+            setTabOpener(null)
+        }
     }, [])
 
     return (
