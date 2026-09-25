@@ -2,16 +2,36 @@ import logo from "../../../assets/wordmark-no-credit.png"
 import logoDark from "../../../assets/wordmark-no-credit-dark.png"
 import placeholderProfileImage from '../../../assets/placeholder/profile.jpg'
 import { Icon } from '@iconify/react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { dashboardContent } from '../../UI/App/TabContent/Dashboard'
 import { createTestTabContent } from '../../UI/App/TabContent/CreateTest'
 import { viewReportContent } from '../../UI/App/TabContent/ViewReports'
+
+import { getCurrentProfile, logout } from '../../../lib/profiles'
 
 interface SidebarProps {
     addTab: (component?: React.ReactNode, label?: string) => void
 }
 
 export default function Sidebar({ addTab }: SidebarProps) {
+    const navigate = useNavigate()
+    const [profile] = useState(() => getCurrentProfile())
+
+    const initials =
+        profile?.name
+            .split(/\s+/)
+            .map((word) => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .slice(0, 2) || '??'
+
+    const handleLogout = () => {
+        logout()
+        navigate('/')
+    }
+
     return (
         <>
             <div className="h-full p-ui border-r border-border/10 dark:border-border-dark/10 font-ui">
@@ -28,10 +48,23 @@ export default function Sidebar({ addTab }: SidebarProps) {
                 <div className="min-w-60 duration-ui border border-border/10 dark:border-border-dark/10 hover:bg-main/10 hover:cursor-pointer p-ui rounded-ui flex flex-col">
                     <h3 className="opacity-50 flex gap-1.5 items-center"><Icon icon="codicon:account" />Logged in as</h3>
                     <div className="flex my-2 items-center gap-2 border dark:border-border-dark/10 border-border/10 rounded-ui p-ui">
-                        <img className="w-10 rounded-full" src={placeholderProfileImage}></img>
-                        <div>
-                            <h1 className="">Dr. Pradeep</h1>
-                            <h2 className="text-[12px] opacity-50">LAB011010231</h2>
+                        {profile ? (
+                            <div className="size-10 rounded-full shrink-0 flex items-center justify-center font-mono text-sm bg-linear-to-br from-indigo-500 to-purple-600 text-white select-none">
+                                {initials}
+                            </div>
+                        ) : (
+                            <img className="w-10 rounded-full" src={placeholderProfileImage}></img>
+                        )}
+                        <div className="min-w-0">
+                            <h1 className="truncate">{profile?.name ?? 'Not signed in'}</h1>
+                            {profile ? (
+                                <>
+                                    <h2 className="text-[12px] opacity-50 font-mono">{profile.licenceNumber || 'No licence'}</h2>
+                                    <h2 className="text-[12px] opacity-70">{profile.role}</h2>
+                                </>
+                            ) : (
+                                <h2 className="text-[12px] opacity-50">Log in to get started</h2>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -50,10 +83,10 @@ export default function Sidebar({ addTab }: SidebarProps) {
                             <Icon icon="carbon:settings"/>
                             Settings
                         </button>
-                        <a href="/" className="duration-ui text-black dark:text-white rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10">
+                        <button onClick={handleLogout} className="duration-ui text-black dark:text-white rounded-ui flex items-center gap-1.5 text-left px-2 py-1 hover:bg-border/10 dark:hover:bg-border-dark/10">
                             <Icon icon="mdi:logout"/>
                             Log out
-                        </a>
+                        </button>
                         
                     </div>
                 </div>
