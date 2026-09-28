@@ -15,6 +15,9 @@ Hence, there is a requirement for a software application that automates test dat
 
 - Should be able to capture instrument details and technical specifications.
 - Recording laboratory and environmental conditions.
+- Search and Retrieval facility
+- Automatic preparation of standardized test reports with auto-population of laboratory and instrument details
+- Digital signatures (optional)
 - ✅ Entering observations from various OIML R-76 compliant test procedures.
 - ✅ Automatically determining pass/fail criteria.
 - ✅ Generate standardized digital test reports which can be printed.
@@ -28,13 +31,10 @@ Hence, there is a requirement for a software application that automates test dat
 - ✅ Real-Time Dashboard for monitoring real-time testing activities.
 	- ✅ Automatically calculating permissible errors, and compliance status (whether it complies or not)
 	- ✅ Dashboard for test report management (completed, in process, history access etc.)
-- Search and Retrieval facility
 - ✅ Technical documentation describing software architecture (software design), calculation methodology and deployment framework (tech stack).
 - ✅ Entry of manufacturer details, Instrument specifications, Model information and technical parameters
 - ✅ Entry of observations for all prescribed tests
 - ✅ Automatic validation of input data and related calculations
-- Automatic preparation of standardized test reports with auto-population of laboratory and instrument details
-- Digital signatures (optional)
 - ✅ Export to PDF and editable formats
 
 # OIML R-76, NAWI, Instrument Classification
