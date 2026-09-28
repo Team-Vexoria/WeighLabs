@@ -15,27 +15,27 @@ Hence, there is a requirement for a software application that automates test dat
 
 - Should be able to capture instrument details and technical specifications.
 - Recording laboratory and environmental conditions.
-- Entering observations from various OIML R-76 compliant test procedures.
-- Automatically determining pass/fail criteria.
-- Generate standardized digital test reports which can be printed.
-- Maintain a digital repository of completed test reports.
-- Providing secure user access with role-based permissions.
-- Supports easy future updating whenever OIML recommendations are revised.
-- Should be a user-friendly desktop/web-based application.
-- Digital data entry forms for applicable OIML R-76 tests
-- Test Report generation in PDF and editable formats MS WORD etc.
-- Instrument-bound test history and report repository.
-- Real-Time Dashboard for monitoring real-time testing activities.
-	- Automatically calculating permissible errors, and compliance status (whether it complies or not)
-	- Dashboard for test report management (completed, in process, history access etc.)
+- ✅ Entering observations from various OIML R-76 compliant test procedures.
+- ✅ Automatically determining pass/fail criteria.
+- ✅ Generate standardized digital test reports which can be printed.
+- ✅ Maintain a digital repository of completed test reports.
+- ✅ Providing secure user access with role-based permissions.
+- ✅ Supports easy future updating whenever OIML recommendations are revised.
+- ✅ Should be a user-friendly desktop/web-based application.
+- ✅ Digital data entry forms for applicable OIML R-76 tests
+- ✅ Test Report generation in PDF and editable formats MS WORD etc.
+- ✅ Instrument-bound test history and report repository.
+- ✅ Real-Time Dashboard for monitoring real-time testing activities.
+	- ✅ Automatically calculating permissible errors, and compliance status (whether it complies or not)
+	- ✅ Dashboard for test report management (completed, in process, history access etc.)
 - Search and Retrieval facility
 - Technical documentation describing software architecture (software design), calculation methodology and deployment framework (tech stack).
-- Entry of manufacturer details, Instrument specifications, Model information and technical parameters
-- Entry of observations for all prescribed tests
-- Automatic validation of input data and related calculations
+- ✅ Entry of manufacturer details, Instrument specifications, Model information and technical parameters
+- ✅ Entry of observations for all prescribed tests
+- ✅ Automatic validation of input data and related calculations
 - Automatic preparation of standardized test reports with auto-population of laboratory and instrument details
 - Digital signatures (optional)
-- Export to PDF and editable formats
+- ✅ Export to PDF and editable formats
 
 # OIML R-76, NAWI, Instrument Classification
 

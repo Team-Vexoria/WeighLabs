@@ -11,7 +11,7 @@
             - [X] Real-Time Dashboard
 - [ ] APP-BACKEND
     - [ ] Writing to SQLITE database
-    - [ ] Writing/Exporting to .csv / .docx / .pdf
+    - [X] Writing/Exporting to .csv / .docx / .pdf
 
 # Server
 - [ ] API
