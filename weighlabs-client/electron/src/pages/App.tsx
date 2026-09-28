@@ -8,6 +8,7 @@ export interface Tab {
     id: string,
     Label: string,
     Component: React.ReactNode
+    isDefault?: boolean
 }
 
 // tab page
@@ -17,7 +18,7 @@ import { createTestTabContent } from '../components/UI/App/TabContent/CreateTest
 import { viewReportContent } from '../components/UI/App/TabContent/ViewReports'
 
 function makeDefaultTab(): Tab {
-    return { id: crypto.randomUUID(), Label: "New Tab", Component: newTabContent }
+    return { id: crypto.randomUUID(), Label: "New Tab", Component: newTabContent, isDefault: true }
 }
 
 
@@ -37,6 +38,15 @@ export default function App() {
 
     const addTab = (component: React.ReactNode = newTabContent, label?: string) => {
         setTabState(prev => {
+            // the lone default "New Tab" is a placeholder, not something the user opened
+            const onlyTab = prev.tabs.length === 1 ? prev.tabs[0] : null
+            const onlyTabIsDefault = onlyTab?.isDefault === true
+
+            // asking for another placeholder just reuses the default one
+            if (label === undefined && onlyTabIsDefault) {
+                return { ...prev, activeTabId: onlyTab.id }
+            }
+
             const resolvedLabel = label ?? `New Tab #${prev.tabs.filter(t => t.Label.startsWith('New Tab')).length + 1}`
             const existing = prev.tabs.find(t => t.Label === resolvedLabel)
 
@@ -45,7 +55,28 @@ export default function App() {
             }
 
             const newTab: Tab = { id: crypto.randomUUID(), Label: resolvedLabel, Component: component }
+
+            // opening a real tab while the default placeholder is the only tab — replace it
+            if (onlyTabIsDefault) {
+                return { tabs: [newTab], activeTabId: newTab.id }
+            }
+
             return { tabs: [...prev.tabs, newTab], activeTabId: newTab.id }
+        })
+    }
+
+    // drag-and-drop reorder. `insertIndex` is relative to the list with the dragged tab removed
+    const moveTab = (draggedId: string, insertIndex: number) => {
+        setTabState(prev => {
+            const from = prev.tabs.findIndex(t => t.id === draggedId)
+            if (from === -1) return prev
+
+            const tabs = prev.tabs.filter(t => t.id !== draggedId)
+            const index = Math.max(0, Math.min(insertIndex, tabs.length))
+            tabs.splice(index, 0, prev.tabs[from])
+
+            const unchanged = tabs.every((t, i) => t.id === prev.tabs[i].id)
+            return unchanged ? prev : { ...prev, tabs }
         })
     }
 
@@ -66,6 +97,24 @@ export default function App() {
             }
         })
     }
+
+    // ctrl+tab / ctrl+shift+tab cycle tabs like Chrome does
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (!e.ctrlKey || e.altKey || e.metaKey || e.key !== 'Tab') return
+            e.preventDefault()
+            setTabState(prev => {
+                if (prev.tabs.length < 2) return prev
+                const current = prev.tabs.findIndex(t => t.id === prev.activeTabId)
+                // ctrl+shift+tab walks backwards, ctrl+tab forwards, both wrapping around
+                const step = e.shiftKey ? -1 : 1
+                const next = (current + step + prev.tabs.length) % prev.tabs.length
+                return { ...prev, activeTabId: prev.tabs[next].id }
+            })
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [])
 
     useEffect(() => {
         setNavigator((target) => {
@@ -94,6 +143,7 @@ export default function App() {
                         setActiveTabId={setActiveTabId}
                         addTab={addTab}
                         removeTab={removeTab}
+                        onReorder={moveTab}
                     />
                     <div className={dashboardActive ? 'overflow-auto' : 'hidden'} aria-hidden={!dashboardActive}>
                         {dashboardContent}

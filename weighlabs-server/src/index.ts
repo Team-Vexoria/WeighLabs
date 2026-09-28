@@ -1,13 +1,22 @@
 // Entry Point of the server used to verify credentials and interact with server database alongside local database.
-import express from 'express'
+import fastify from 'fastify'
 import 'dotenv/config'
 
-const app = express()
-const PORT = process.env.PORT
+const app = fastify()
+const PORT = parseInt(process.env.PORT!) || 3000
 
 // route handlers
-app.get("/", )
+import serverStatusRoute from './routes/serverStatus.ts'
 
-app.listen(PORT, () => {
-    console.log('WeighLabs server is Online 🚀')
+// plugins
+import authPluginHandler from './routes/auth.ts'
+
+// external route handling
+app.get('/', serverStatusRoute)
+
+// handle login/creation/deletion
+app.register(authPluginHandler, { prefix: '/auth '})
+
+app.listen({port: PORT}, () => {
+    console.log('WeighLabs Server is Online 🚀')
 });
