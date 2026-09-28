@@ -78,7 +78,7 @@ b) Self Indicating / Semi-Self Indicating / Non-Self Indicating
 As per the requirements provided by the problem statement, the following techstack is selected:
 
  - **Electron (React + Tailwind)** — used for UI/UX of the software, data entering by the operator, report viewing/formatting/printing, handling instrument profile, operator profile, etc.
- - **Native executable built with Go** — used for high-speed gRPC/websocket communication with Electron frontend and communication with lab machinery, a seperate decentralized executable that runs alongside Electron for uninterruptable testing.
+ - **Native executable built with Rust** — used for high-speed gRPC/websocket communication with Electron frontend and communication with lab machinery, a seperate decentralized executable that runs alongside Electron for uninterruptable testing.
 
 During testing
 - Operator logs into the software using their login credentials.

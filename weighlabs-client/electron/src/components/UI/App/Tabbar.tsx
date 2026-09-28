@@ -1,5 +1,5 @@
 import { Icon } from '@iconify/react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { type Tab } from '../../../pages/App'
 
 interface TabbarProps {
@@ -43,11 +43,16 @@ function TabButton({ tab, isActive, onSelect, onClose }: TabButtonProps) {
     )
 }
 
-interface DragState {
+interface Session {
     id: string
     width: number
     grabX: number
     grabY: number
+    originX: number
+    originY: number
+    lastX: number
+    lastY: number
+    moved: boolean
 }
 
 const DRAG_THRESHOLD = 4
@@ -56,14 +61,25 @@ export default function Tabbar({ tabs, activeTabId, setActiveTabId, addTab, remo
     const floatRef = useRef<HTMLDivElement | null>(null)
     const tabEls = useRef(new Map<string, HTMLElement>())
 
-    const drag = useRef<DragState | null>(null)
-    const origin = useRef<{ x: number; y: number } | null>(null)
+    const session = useRef<Session | null>(null)
     const dropIndex = useRef<number | null>(null)
-    const moved = useRef(false)
     const suppressClick = useRef(false)
+    const reorder = useRef(onReorder)
+    const detach = useRef<(() => void) | null>(null)
+    const currentTabs = useRef(tabs)
 
-    const [ghost, setGhost] = useState(false)
+    // only what the render needs lives in state; live pointer data stays in refs
+    const [dragged, setDragged] = useState<{ id: string; width: number } | null>(null)
     const [gapAt, setGapAt] = useState<number | null>(null)
+
+    useEffect(() => {
+        reorder.current = onReorder
+    }, [onReorder])
+
+    // a drag can outlive the render that started it, so measure against the latest tabs
+    useEffect(() => {
+        currentTabs.current = tabs
+    }, [tabs])
 
     const registerTab = (id: string) => (el: HTMLDivElement | null) => {
         if (el) tabEls.current.set(id, el)
@@ -71,9 +87,9 @@ export default function Tabbar({ tabs, activeTabId, setActiveTabId, addTab, remo
     }
 
     // insert index within the list of tabs other than the dragged one
-    const indexAtPointer = (clientX: number, draggedId: string) => {
+    const indexAtPointer = useCallback((clientX: number, draggedId: string) => {
         let index = 0
-        for (const tab of tabs) {
+        for (const tab of currentTabs.current) {
             if (tab.id === draggedId) continue
             const el = tabEls.current.get(tab.id)
             if (!el) continue
@@ -81,156 +97,145 @@ export default function Tabbar({ tabs, activeTabId, setActiveTabId, addTab, remo
             if (clientX > rect.left + rect.width / 2) index++
         }
         return index
-    }
+    }, [])
 
-    const setDrop = (index: number) => {
-        if (dropIndex.current === index) return
-        dropIndex.current = index
-        setGapAt(index)
-    }
-
-    const endDrag = (commit: boolean) => {
-        const state = drag.current
-        if (commit && state && dropIndex.current !== null) {
-            onReorder(state.id, dropIndex.current)
+    const endDrag = useCallback((commit: boolean) => {
+        const s = session.current
+        if (commit && s && dropIndex.current !== null) {
+            reorder.current(s.id, dropIndex.current)
         }
-        drag.current = null
-        origin.current = null
+        detach.current?.()
+        session.current = null
         dropIndex.current = null
-        moved.current = false
-        document.body.style.userSelect = ''
-        setGhost(false)
+        setDragged(null)
         setGapAt(null)
-    }
+    }, [])
+
+    const handlePointerMove = useCallback((e: PointerEvent) => {
+        const s = session.current
+        if (!s) return
+
+        s.lastX = e.clientX
+        s.lastY = e.clientY
+
+        if (!s.moved) {
+            const dx = e.clientX - s.originX
+            const dy = e.clientY - s.originY
+            if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return
+            s.moved = true
+            setDragged({ id: s.id, width: s.width })
+        }
+
+        e.preventDefault() // don't select text while dragging
+
+        // move the ghost imperatively so it tracks the pointer without re-rendering
+        if (floatRef.current) {
+            floatRef.current.style.transform =
+                `translate3d(${e.clientX - s.grabX}px, ${e.clientY - s.grabY}px, 0)`
+        }
+
+        const index = indexAtPointer(e.clientX, s.id)
+        if (dropIndex.current !== index) {
+            dropIndex.current = index
+            setGapAt(index)
+        }
+    }, [indexAtPointer])
+
+    const handlePointerUp = useCallback(() => {
+        const s = session.current
+        if (!s) return
+        // click fires after pointerup, so leave the flag set for the click to consume
+        suppressClick.current = s.moved
+        endDrag(s.moved)
+    }, [endDrag])
 
     const handlePointerDown = (e: React.PointerEvent, id: string) => {
         if (e.button !== 0 || tabs.length < 2) return
 
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-        origin.current = { x: e.clientX, y: e.clientY }
-        drag.current = {
+        session.current = {
             id,
             width: rect.width,
             grabX: e.clientX - rect.left,
             grabY: e.clientY - rect.top,
+            originX: e.clientX,
+            originY: e.clientY,
+            lastX: e.clientX,
+            lastY: e.clientY,
+            moved: false,
         }
-
         suppressClick.current = false
+
         e.currentTarget.setPointerCapture?.(e.pointerId)
+
+        // listen on window so the drag survives leaving the strip or the window
+        window.addEventListener('pointermove', handlePointerMove)
+        window.addEventListener('pointerup', handlePointerUp)
+        window.addEventListener('pointercancel', handlePointerUp)
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return
+            suppressClick.current = false
+            endDrag(false)
+        }
+        window.addEventListener('keydown', onKey)
+
+        detach.current = () => {
+            window.removeEventListener('pointermove', handlePointerMove)
+            window.removeEventListener('pointerup', handlePointerUp)
+            window.removeEventListener('pointercancel', handlePointerUp)
+            window.removeEventListener('keydown', onKey)
+        }
     }
 
-    const handlePointerMove = (e: React.PointerEvent) => {
-        const state = drag.current
-        const start = origin.current
-        if (!state || !start) return
+    // put the ghost under the cursor the moment it mounts
+    useLayoutEffect(() => {
+        const s = session.current
+        if (!dragged || !s || !floatRef.current) return
+        floatRef.current.style.transform = `translate3d(${s.lastX - s.grabX}px, ${s.lastY - s.grabY}px, 0)`
+    }, [dragged])
 
-        if (!moved.current) {
-            const dx = e.clientX - start.x
-            const dy = e.clientY - start.y
-            if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return
-            moved.current = true
-            setGhost(true)
-            document.body.style.userSelect = 'none'
+    const draggedTab = dragged ? tabs.find(t => t.id === dragged.id) : undefined
+
+    const selectTab = (id: string) => {
+        if (suppressClick.current) {
+            suppressClick.current = false // the drag ended here, don't also select it
+            return
         }
-
-        // move the floating ghost imperatively so it tracks the pointer at 60fps
-        if (floatRef.current) {
-            floatRef.current.style.transform =
-                `translate3d(${e.clientX - state.grabX}px, ${e.clientY - state.grabY}px, 0)`
-        }
-
-        setDrop(indexAtPointer(e.clientX, state.id))
+        setActiveTabId(id)
     }
-
-    const handlePointerUp = () => {
-        if (!drag.current) return
-        // click fires after pointerup, so leave the flag set until the click consumes it
-        suppressClick.current = moved.current
-        endDrag(moved.current)
-    }
-
-    // a drag can end outside the strip; safety net so the ghost never gets stuck
-    useEffect(() => {
-        if (!ghost) return
-        const onUp = () => {
-            if (!drag.current) return
-            suppressClick.current = moved.current
-            endDrag(moved.current)
-        }
-        window.addEventListener('pointerup', onUp)
-        window.addEventListener('pointercancel', onUp)
-        return () => {
-            window.removeEventListener('pointerup', onUp)
-            window.removeEventListener('pointercancel', onUp)
-        }
-    }, [ghost])
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key !== 'Escape' || !drag.current) return
-        e.preventDefault()
-        endDrag(false)
-    }
-
-    const dragged = ghost ? drag.current?.id : null
-    const draggedTab = dragged ? tabs.find(t => t.id === dragged) : undefined
 
     // while dragging, the strip drops the dragged tab and opens a gap where it will land
-    const visible = tabs.filter(t => t.id !== dragged)
-    const strip = visible.flatMap((tab, i) => {
+    const strip = tabs.filter(t => t.id !== dragged?.id).flatMap((tab, i) => {
         const nodes = [
             <div
                 key={tab.id}
                 onPointerDown={(e) => handlePointerDown(e, tab.id)}
-                onClick={() => {
-                    if (suppressClick.current) {
-                        suppressClick.current = false // the drag ended here, don't also select it
-                        return
-                    }
-                    setActiveTabId(tab.id)
-                }}
+                onClick={() => selectTab(tab.id)}
                 ref={registerTab(tab.id)}
                 className="shrink-0 cursor-grab active:cursor-grabbing touch-none"
             >
                 <TabButton
                     tab={tab}
                     isActive={tab.id === activeTabId}
-                    onSelect={() => {
-                        if (suppressClick.current) {
-                            suppressClick.current = false
-                            return
-                        }
-                        setActiveTabId(tab.id)
-                    }}
+                    onSelect={() => selectTab(tab.id)}
                     onClose={() => removeTab(tab.id)}
                 />
             </div>,
         ]
 
         if (gapAt === i + 1) {
-            nodes.push(
-                <div
-                    key={`gap-${tab.id}`}
-                    className="shrink-0"
-                    style={{ width: drag.current?.width }}
-                />,
-            )
+            nodes.push(<div key={`gap-${tab.id}`} className="shrink-0" style={{ width: dragged?.width }} />)
         }
 
         return nodes
     })
 
     if (gapAt === 0) {
-        strip.unshift(<div key="gap-head" className="shrink-0" style={{ width: drag.current?.width }} />)
+        strip.unshift(<div key="gap-head" className="shrink-0" style={{ width: dragged?.width }} />)
     }
 
     return (
-        <div
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            onKeyDown={handleKeyDown}
-            className="min-w-0 max-w-screen shrink-0 border-b border-border/10 dark:border-border-dark/10"
-        >
+        <div className="min-w-0 max-w-screen shrink-0 border-b border-border/10 dark:border-border-dark/10 select-none">
             <div role="tablist" className="min-w-0 max-w-screen overflow-x-auto flex">
                 {strip}
 
@@ -240,11 +245,11 @@ export default function Tabbar({ tabs, activeTabId, setActiveTabId, addTab, remo
                 </button>
             </div>
 
-            {draggedTab && (
+            {dragged && draggedTab && (
                 <div
                     ref={floatRef}
                     className="fixed top-0 left-0 z-50 pointer-events-none shadow-lg rounded-ui overflow-hidden bg-main dark:bg-main-dark"
-                    style={{ width: drag.current?.width }}
+                    style={{ width: dragged.width }}
                 >
                     <TabButton tab={draggedTab} isActive onSelect={() => { }} onClose={() => { }} />
                 </div>

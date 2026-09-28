@@ -98,19 +98,31 @@ export default function App() {
         })
     }
 
-    // ctrl+tab / ctrl+shift+tab cycle tabs like Chrome does
+    // chrome-style keyboard tab switching
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (!e.ctrlKey || e.altKey || e.metaKey || e.key !== 'Tab') return
-            e.preventDefault()
-            setTabState(prev => {
-                if (prev.tabs.length < 2) return prev
-                const current = prev.tabs.findIndex(t => t.id === prev.activeTabId)
-                // ctrl+shift+tab walks backwards, ctrl+tab forwards, both wrapping around
-                const step = e.shiftKey ? -1 : 1
-                const next = (current + step + prev.tabs.length) % prev.tabs.length
-                return { ...prev, activeTabId: prev.tabs[next].id }
-            })
+            // ctrl+tab / ctrl+shift+tab walk forwards and backwards through the strip
+            if (e.ctrlKey && !e.altKey && !e.metaKey && e.key === 'Tab') {
+                e.preventDefault()
+                setTabState(prev => {
+                    if (prev.tabs.length < 2) return prev
+                    const current = prev.tabs.findIndex(t => t.id === prev.activeTabId)
+                    const step = e.shiftKey ? -1 : 1
+                    const next = (current + step + prev.tabs.length) % prev.tabs.length
+                    return { ...prev, activeTabId: prev.tabs[next].id }
+                })
+                return
+            }
+
+            // ctrl+1..9 jumps straight to that tab
+            if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+                e.preventDefault()
+                const target = Number(e.code.slice(5)) - 1
+                setTabState(prev => {
+                    const tab = prev.tabs[target]
+                    return tab ? { ...prev, activeTabId: tab.id } : prev
+                })
+            }
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
