@@ -29,7 +29,7 @@ Hence, there is a requirement for a software application that automates test dat
 	- ✅ Automatically calculating permissible errors, and compliance status (whether it complies or not)
 	- ✅ Dashboard for test report management (completed, in process, history access etc.)
 - Search and Retrieval facility
-- Technical documentation describing software architecture (software design), calculation methodology and deployment framework (tech stack).
+- ✅ Technical documentation describing software architecture (software design), calculation methodology and deployment framework (tech stack).
 - ✅ Entry of manufacturer details, Instrument specifications, Model information and technical parameters
 - ✅ Entry of observations for all prescribed tests
 - ✅ Automatic validation of input data and related calculations
